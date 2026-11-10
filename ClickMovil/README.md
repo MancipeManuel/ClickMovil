@@ -68,6 +68,10 @@ app/src/main/
 En Android Studio: **Build → Build Bundle(s) / APK(s) → Build APK(s)**.
 El APK queda en `app/build/outputs/apk/debug/`.
 
+## Repositorio
+
+https://github.com/MancipeManuel/ClickMovil
+
 ## Commits
 
 El historial refleja avance incremental: proyecto base → splash/login → flujo comprador → paneles vendedor/admin → pulido de UI y recursos.
