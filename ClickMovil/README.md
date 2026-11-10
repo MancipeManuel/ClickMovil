@@ -1,12 +1,19 @@
 # ClickMóvil
 
-Tienda virtual Android de accesorios para celular. Proyecto de la actividad de interfaces gráficas (comprador, vendedor y administrador).
+Tienda virtual Android de accesorios para celular (Fundación Universitaria Compensar).
+Actividad 4 — Interfaces gráficas completas por rol (comprador, vendedor y administrador).
+
+## Requisitos
+
+- Android Studio Ladybug o superior
+- JDK 17
+- Emulador o dispositivo con Android 8.0 (API 26) o superior
 
 ## Cómo abrirlo
 
 1. Abre la carpeta `ClickMovil` en Android Studio.
 2. Espera la sincronización de Gradle.
-3. Ejecuta la app en un emulador o en un celular con Android 8 o superior.
+3. Ejecuta la app (`Run`) en emulador o celular.
 
 ## Cuentas de prueba
 
@@ -18,17 +25,49 @@ Tienda virtual Android de accesorios para celular. Proyecto de la actividad de i
 
 ## Pantallas por rol
 
-- Transversal: splash, inicio de sesión, biometría, recuperación de contraseña, registro y barra inferior.
-- Comprador: inicio, catálogo, detalle, carrito, pasarela de pago, pedidos y perfil.
-- Vendedor: productos (crear, editar, retirar), pedidos recibidos y perfil.
-- Administrador: panel, usuarios (crear, editar, desactivar, eliminar), productos y reporte de ventas.
+### Transversal
+Splash, login, registro, recuperación de contraseña, autenticación biométrica y `BottomNavigationView` por rol.
 
-## Recursos de interfaz
+### Comprador
+Inicio, catálogo, detalle de producto, carrito, pasarela de pago simulada, pedidos y perfil.
 
-- `res/values/colors.xml`: paleta azul oscuro y verde azulado, distinta del tema por defecto.
-- `res/values/strings.xml`: textos de la interfaz.
-- `res/values/dimens.xml`: espacios, radios y tamaños.
-- `res/values/themes.xml`: tema, botones y estilos de texto.
-- `res/drawable`: ícono, logo y vectores del menú.
-- `res/layout`: activities y fragments por pantalla.
-- `res/menu`: navegación inferior de cada rol.
+### Vendedor
+CRUD de productos (con cámara/galería), historial de pedidos recibidos y perfil.
+
+### Administrador
+Dashboard, gestión de usuarios (crear/editar/activar/eliminar), productos y reporte de ventas.
+
+## Estructura del proyecto
+
+```
+app/src/main/
+├── java/.../clickmovil/
+│   ├── data/          # SQLite, repositorio y sesión
+│   ├── model/         # Entidades y roles
+│   ├── ui/            # Activities y Fragments por rol
+│   └── util/          # Navegación y formato
+└── res/
+    ├── layout/        # XML de pantallas e ítems
+    ├── menu/          # Navegación inferior por rol
+    ├── drawable/      # Vectores, fondos y chips
+    ├── color/         # Selectores (nav)
+    ├── values/        # colors, dimens, strings, themes
+    └── xml/           # FileProvider
+```
+
+## Recursos de interfaz (no usa tema por defecto)
+
+- `res/values/colors.xml` — paleta navy/teal propia
+- `res/values/strings.xml` — textos centralizados
+- `res/values/dimens.xml` — espacios, radios y tipografías
+- `res/values/themes.xml` — `Theme.ClickMovil` y estilos de botón/input
+- `res/drawable/` — logo, íconos y fondos personalizados
+
+## Generar APK de validación
+
+En Android Studio: **Build → Build Bundle(s) / APK(s) → Build APK(s)**.
+El APK queda en `app/build/outputs/apk/debug/`.
+
+## Commits
+
+El historial refleja avance incremental: proyecto base → splash/login → flujo comprador → paneles vendedor/admin → pulido de UI y recursos.

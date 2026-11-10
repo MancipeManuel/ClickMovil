@@ -18,18 +18,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/space_md">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="La cámara solo se usa para la foto del producto."
+            android:text="@string/camera_hint"
             android:textColor="@color/muted" />
 
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="160dp"
-            android:layout_marginTop="8dp">
+            android:layout_height="@dimen/form_photo_height"
+            android:layout_marginTop="@dimen/space_sm">
 
             <TextView
                 android:id="@+id/fallback"
@@ -37,7 +37,7 @@
                 android:layout_height="match_parent"
                 android:background="@color/line"
                 android:gravity="center"
-                android:text="Sin foto"
+                android:text="@string/no_photo"
                 android:textColor="@color/navy" />
 
             <ImageView
@@ -60,16 +60,16 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Cámara" />
+                android:text="@string/camera" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/galleryButton"
                 style="@style/Widget.ClickMovil.Button.Outlined"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="@dimen/space_sm"
                 android:layout_weight="1"
-                android:text="Galería" />
+                android:text="@string/gallery" />
         </LinearLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -88,8 +88,8 @@
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="Descripción">
+            android:layout_marginTop="@dimen/space_sm"
+            android:hint="@string/description">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/description"
@@ -102,8 +102,8 @@
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="Precio (COP)">
+            android:layout_marginTop="@dimen/space_sm"
+            android:hint="@string/price_cop">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/price"
@@ -115,22 +115,22 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Categoría" />
+            android:layout_marginTop="@dimen/space_sm"
+            android:text="@string/category" />
 
         <Spinner
             android:id="@+id/category"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/white"
-            android:padding="8dp" />
+            android:padding="@dimen/space_sm" />
 
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="Existencias">
+            android:layout_marginTop="@dimen/space_sm"
+            android:hint="@string/stock">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/stock"
@@ -143,8 +143,8 @@
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="Compatibilidad">
+            android:layout_marginTop="@dimen/space_sm"
+            android:hint="@string/compatibility">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/compatibility"
@@ -165,7 +165,7 @@
             style="@style/Widget.ClickMovil.Button.Outlined"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Retirar publicación"
+            android:text="@string/retire_product"
             android:visibility="gone" />
     </LinearLayout>
     </ScrollView>

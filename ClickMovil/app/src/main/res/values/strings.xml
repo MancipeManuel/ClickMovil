@@ -84,4 +84,26 @@
     <string name="seller_profile">Perfil del vendedor</string>
     <string name="buyer_profile">Perfil del comprador</string>
     <string name="admin_profile">Perfil del administrador</string>
+    <string name="brand_mark">CM</string>
+    <string name="qty_minus">−</string>
+    <string name="qty_plus">+</string>
+    <string name="qty_default">1</string>
+    <string name="warranty_text">Garantía: 30 días por defectos de fabricación.</string>
+    <string name="delivery_estimate">Entrega estimada: 3 a 5 días hábiles en Bogotá y hasta 8 días en otras ciudades.</string>
+    <string name="retract_hint">Puedes retractarte en los términos informados antes del envío. El canal de reclamos está en Perfil.</string>
+    <string name="pay_now">Pagar ahora</string>
+    <string name="camera_hint">La cámara solo se usa para la foto del producto.</string>
+    <string name="no_photo">Sin foto</string>
+    <string name="camera">Cámara</string>
+    <string name="gallery">Galería</string>
+    <string name="description">Descripción</string>
+    <string name="price_cop">Precio (COP)</string>
+    <string name="category">Categoría</string>
+    <string name="stock">Existencias</string>
+    <string name="compatibility">Compatibilidad</string>
+    <string name="retire_product">Retirar publicación</string>
+    <string name="admin_role_note">Rol verificado antes de mostrar este panel.</string>
+    <string name="enable_biometric">Activar ingreso con huella</string>
+    <string name="order_detail">Detalle</string>
+    <string name="remove">Quitar</string>
 </resources>

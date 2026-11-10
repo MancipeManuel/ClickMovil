@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Actividad 4 — ClickMóvil — Documento técnico actualizado</title>
+<style>
+  :root {
+    --ink: #1c2430; --muted: #4b5563; --line: #d5dde6;
+    --navy: #0b3a6e; --teal: #0f766e; --bg: #f4f7fb; --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Calibri, "Segoe UI", Arial, sans-serif; color: var(--ink); background: var(--bg); }
+  .page { max-width: 900px; margin: 0 auto; padding: 28px 32px 48px; background: var(--card); }
+  h1 { color: var(--navy); font-size: 22pt; margin: 0 0 6px; }
+  h2 { color: var(--navy); font-size: 14pt; border-bottom: 2px solid var(--teal); padding-bottom: 4px; margin-top: 28px; }
+  h3 { color: var(--teal); font-size: 12pt; margin-top: 16px; }
+  p, li { font-size: 11pt; line-height: 1.45; color: var(--ink); }
+  .meta { color: var(--muted); font-size: 10.5pt; margin-bottom: 18px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 16px; font-size: 10.5pt; }
+  th, td { border: 1px solid var(--line); padding: 7px 8px; vertical-align: top; text-align: left; }
+  th { background: #e8eef6; color: var(--navy); }
+  code, .path { font-family: Consolas, monospace; font-size: 10pt; background: #eef2f7; padding: 1px 4px; border-radius: 3px; }
+  .box { background: #eef8f6; border-left: 4px solid var(--teal); padding: 10px 12px; margin: 12px 0; }
+  .warn { background: #fff7ed; border-left: 4px solid #b45309; padding: 10px 12px; margin: 12px 0; }
+  ul { margin-top: 6px; }
+  @media print { body { background: white; } .page { padding: 12px 0; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>ClickMóvil — Documento técnico actualizado</h1>
+  <p class="meta">
+    Actividad 4 · Interfaces gráficas completas · Aplicaciones nativas<br />
+    Estudiante: Héctor Mancipe · Curso 2310-6c<br />
+    Actualización coherente con el frontend Android implementado
+  </p>
+
+  <div class="box">
+    Este documento incorpora las observaciones de completitud de la Actividad 1/2
+    (mockups, flujos por rol, normas y recursos centralizados) y describe las
+    decisiones técnicas del código entregado en Android Studio.
+  </div>
+
+  <h2>1. Alcance de la Actividad 4</h2>
+  <p>
+    Se construyó el frontend nativo de la tienda virtual de accesorios para celular
+    definida en la planeación previa. Todas las pantallas mínimas por rol están
+    implementadas con layouts XML, navegación inferior, estilos propios y recursos
+    en <span class="path">values</span> / <span class="path">drawable</span>.
+  </p>
+
+  <h2>2. Correcciones respecto a la documentación previa</h2>
+  <table>
+    <thead>
+      <tr><th>Observación / mejora</th><th>Cómo quedó en el desarrollo</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Mockups incompletos o genéricos</td>
+        <td>Cada rol tiene pantallas reales navegables (no placeholders).</td>
+      </tr>
+      <tr>
+        <td>Falta de diferenciación por rol</td>
+        <td><span class="path">HomeActivity</span> carga menú y fragments según <span class="path">Role</span>.</td>
+      </tr>
+      <tr>
+        <td>Recursos por defecto de Material</td>
+        <td>Paleta navy/teal, temas, dimens y drawables propios en <span class="path">res/values</span>.</td>
+      </tr>
+      <tr>
+        <td>Biometría y recuperación</td>
+        <td>Login con huella (<span class="path">BiometricPrompt</span>) y flujo de recuperación con código demo.</td>
+      </tr>
+      <tr>
+        <td>Pasarela y datos sensibles</td>
+        <td>Checkout simulado; la app no solicita ni guarda datos de tarjeta.</td>
+      </tr>
+      <tr>
+        <td>Versionamiento</td>
+        <td>Historial Git incremental + README con estructura y cuentas de prueba.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>3. Arquitectura de la interfaz</h2>
+  <ul>
+    <li><strong>Activities:</strong> Splash, Login, Register, Recover, Home, ProductDetail, Checkout, ProductForm, UserForm.</li>
+    <li><strong>Fragments por rol:</strong> inicio comprador, catálogo, carrito, pedidos, perfil; productos/ventas vendedor; panel/usuarios/productos/reporte admin.</li>
+    <li><strong>Navegación:</strong> <span class="path">BottomNavigationView</span> con menús <span class="path">menu_buyer</span>, <span class="path">menu_seller</span>, <span class="path">menu_admin</span>.</li>
+    <li><strong>Datos locales:</strong> SQLite + sesión en SharedPreferences para demostrar flujos UI.</li>
+  </ul>
+
+  <h2>4. Pantallas entregadas por rol</h2>
+  <h3>Transversal</h3>
+  <p>Splash, autenticación (correo/contraseña y biometría), registro, recuperación de contraseña y menú inferior.</p>
+  <h3>Administrador</h3>
+  <p>Dashboard, CRUD de usuarios, gestión de productos, reporte de ventas y perfil.</p>
+  <h3>Vendedor</h3>
+  <p>Panel de productos con crear/editar/retirar (cámara o galería), historial de pedidos recibidos y perfil.</p>
+  <h3>Comprador</h3>
+  <p>Inicio, catálogo, detalle, carrito, pasarela de pagos simulada, pedidos y perfil.</p>
+
+  <h2>5. Recursos XML, estilos y drawables</h2>
+  <table>
+    <thead><tr><th>Recurso</th><th>Uso técnico</th></tr></thead>
+    <tbody>
+      <tr><td><span class="path">colors.xml</span></td><td>Paleta #0B3A6E / #0F766E distinta del tema Material por defecto.</td></tr>
+      <tr><td><span class="path">dimens.xml</span></td><td>Espaciados, radios, tipografías y tamaños de controles.</td></tr>
+      <tr><td><span class="path">strings.xml</span></td><td>Textos de UI centralizados (sin literales dispersos en layouts).</td></tr>
+      <tr><td><span class="path">themes.xml</span></td><td><span class="path">Theme.ClickMovil</span>, botones navy/teal, inputs y splash.</td></tr>
+      <tr><td><span class="path">drawable/</span></td><td>Logo, íconos vectoriales, chips, fondos de splash y productos.</td></tr>
+      <tr><td><span class="path">layout/</span></td><td>Activities, fragments e items de RecyclerView.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Generación del APK</h2>
+  <p>
+    En Android Studio: <em>Build → Build Bundle(s) / APK(s) → Build APK(s)</em>.
+    El artefacto de validación queda en <span class="path">app/build/outputs/apk/debug/</span>.
+  </p>
+
+  <h2>7. Entregables asociados</h2>
+  <ul>
+    <li>Código fuente: carpeta <span class="path">ClickMovil/</span> y archivo <span class="path">ClickMovil_Actividad4.zip</span>.</li>
+    <li>Repositorio GitHub público (enlace en la entrega del aula).</li>
+    <li>Video ≤ 5 min explicando XML, layouts, drawables, estilos y values.</li>
+  </ul>
+
+  <div class="warn">
+    <strong>Guion sugerido del video (máx. 5 min):</strong>
+    1) Abrir proyecto y mostrar estructura <span class="path">res/</span>.
+    2) Explicar <span class="path">colors/themes/dimens/strings</span>.
+    3) Recorrer un layout (login o detalle) citando Constraint/Linear y drawables.
+    4) Mostrar menús por rol y BottomNavigation.
+    5) Ejecutar splash → login → catálogo / panel admin.
+  </div>
+
+  <h2>8. Cuentas de demostración</h2>
+  <table>
+    <thead><tr><th>Correo</th><th>Contraseña</th><th>Rol</th></tr></thead>
+    <tbody>
+      <tr><td>ana@correo.com</td><td>123456</td><td>Comprador</td></tr>
+      <tr><td>vendedor@correo.com</td><td>123456</td><td>Vendedor</td></tr>
+      <tr><td>admin@correo.com</td><td>admin123</td><td>Administrador</td></tr>
+    </tbody>
+  </table>
+
+  <p class="meta" style="margin-top:28px;">
+    Documento generado para la entrega de la Actividad 4 — ClickMóvil.
+  </p>
+</div>
+</body>
+</html>

@@ -26,9 +26,9 @@
                 android:layout_height="match_parent"
                 android:background="@drawable/bg_product_photo"
                 android:gravity="center"
-                android:text="CM"
+                android:text="@string/brand_mark"
                 android:textColor="@color/white"
-                android:textSize="28sp"
+                android:textSize="@dimen/text_hero"
                 android:textStyle="bold" />
 
             <ImageView

@@ -35,7 +35,7 @@
                 style="@style/Widget.ClickMovil.Button.Outlined"
                 android:layout_width="48dp"
                 android:layout_height="wrap_content"
-                android:text="-" />
+                android:text="@string/qty_minus" />
 
             <TextView
                 android:id="@+id/qty"
@@ -49,14 +49,14 @@
                 style="@style/Widget.ClickMovil.Button.Outlined"
                 android:layout_width="48dp"
                 android:layout_height="wrap_content"
-                android:text="+" />
+                android:text="@string/qty_plus" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/remove"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Quitar"
+                android:text="@string/remove"
                 android:textColor="@color/danger" />
         </LinearLayout>
     </LinearLayout>

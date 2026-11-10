@@ -21,10 +21,10 @@
 
         <ImageButton
             android:id="@+id/navBack"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="@dimen/icon_button"
+            android:layout_height="@dimen/icon_button"
             android:background="@drawable/bg_header_logo"
-            android:backgroundTint="#1AFFFFFF"
+            android:backgroundTint="@color/white_overlay_10"
             android:contentDescription="@string/back"
             android:padding="10dp"
             android:src="@drawable/ic_back"
@@ -33,13 +33,13 @@
 
         <TextView
             android:id="@+id/brandMark"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="@dimen/icon_button"
+            android:layout_height="@dimen/icon_button"
             android:background="@drawable/bg_header_logo"
             android:gravity="center"
-            android:text="CM"
+            android:text="@string/brand_mark"
             android:textColor="@color/navy"
-            android:textSize="14sp"
+            android:textSize="@dimen/text_brand_sm"
             android:textStyle="bold" />
 
         <LinearLayout
@@ -54,7 +54,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/white"
-                android:textSize="18sp"
+                android:textSize="@dimen/text_toolbar"
                 android:textStyle="bold" />
 
             <TextView
@@ -67,10 +67,10 @@
 
         <ImageButton
             android:id="@+id/cartShortcut"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="@dimen/icon_button"
+            android:layout_height="@dimen/icon_button"
             android:background="@drawable/bg_header_logo"
-            android:backgroundTint="#1AFFFFFF"
+            android:backgroundTint="@color/white_overlay_10"
             android:contentDescription="@string/cart"
             android:padding="10dp"
             android:src="@drawable/ic_cart"
@@ -89,7 +89,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/white"
-        android:elevation="8dp"
+        android:elevation="@dimen/elevation_nav"
         app:itemActiveIndicatorStyle="@style/Widget.ClickMovil.NavIndicator"
         app:itemIconTint="@color/nav_item"
         app:itemPaddingBottom="10dp"

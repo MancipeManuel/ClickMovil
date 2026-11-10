@@ -18,9 +18,9 @@
             android:layout_marginTop="@dimen/space_lg"
             app:cardBackgroundColor="@color/white"
             app:cardCornerRadius="@dimen/radius_sheet"
-            app:cardElevation="6dp"
+            app:cardElevation="@dimen/elevation_card"
             app:strokeColor="@color/line"
-            app:strokeWidth="1dp">
+            app:strokeWidth="@dimen/stroke_thin">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -35,14 +35,14 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        android:layout_width="52dp"
-                        android:layout_height="52dp"
+                        android:layout_width="@dimen/brand_mark_size"
+                        android:layout_height="@dimen/brand_mark_size"
                         android:background="@drawable/bg_logo"
                         android:backgroundTint="@color/teal"
                         android:gravity="center"
-                        android:text="CM"
+                        android:text="@string/brand_mark"
                         android:textColor="@color/white"
-                        android:textSize="16sp"
+                        android:textSize="@dimen/text_brand"
                         android:textStyle="bold" />
 
                     <TextView
@@ -51,7 +51,7 @@
                         android:layout_marginStart="@dimen/space_sm"
                         android:text="@string/app_name"
                         android:textColor="@color/navy"
-                        android:textSize="24sp"
+                        android:textSize="@dimen/text_title"
                         android:textStyle="bold" />
                 </LinearLayout>
 
@@ -72,7 +72,7 @@
                     android:layout_marginTop="@dimen/space_xs"
                     android:text="@string/login_title"
                     android:textColor="@color/ink"
-                    android:textSize="26sp"
+                    android:textSize="@dimen/text_display"
                     android:textStyle="bold" />
 
                 <TextView

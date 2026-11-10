@@ -7,7 +7,7 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="260dp">
+        android:layout_height="@dimen/detail_photo_height">
 
         <TextView
             android:id="@+id/fallback"
@@ -15,7 +15,7 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:textColor="@color/white"
-            android:textSize="28sp"
+            android:textSize="@dimen/text_hero"
             android:textStyle="bold" />
 
         <ImageView
@@ -28,10 +28,10 @@
 
         <ImageButton
             android:id="@+id/backButton"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="@dimen/icon_button"
+            android:layout_height="@dimen/icon_button"
             android:layout_gravity="start|top"
-            android:layout_margin="16dp"
+            android:layout_margin="@dimen/space_md"
             android:background="@drawable/bg_back_chip"
             android:contentDescription="@string/back"
             android:padding="10dp"
@@ -55,14 +55,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/navy"
-                android:textSize="22sp"
+                android:textSize="@dimen/text_title"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/seller"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="@dimen/space_xs"
                 android:textColor="@color/muted" />
 
             <TextView
@@ -71,14 +71,14 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_sm"
                 android:textColor="@color/teal"
-                android:textSize="22sp"
+                android:textSize="@dimen/text_title"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/stock"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="@dimen/space_xs"
                 android:textColor="@color/warn" />
 
             <TextView
@@ -86,7 +86,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_sm"
-                android:text="Garantía: 30 días por defectos de fabricación."
+                android:text="@string/warranty_text"
                 android:textColor="@color/muted"
                 android:textSize="@dimen/text_small" />
 
@@ -102,9 +102,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_sm"
-                android:text="Entrega estimada: 3 a 5 días hábiles en Bogotá y hasta 8 días en otras ciudades."
+                android:text="@string/delivery_estimate"
                 android:textColor="@color/muted"
-                android:textSize="13sp" />
+                android:textSize="@dimen/text_caption" />
 
             <LinearLayout
                 android:id="@+id/qtyRow"
@@ -117,37 +117,37 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/minus"
                     style="@style/Widget.ClickMovil.Button.Outlined"
-                    android:layout_width="52dp"
-                    android:layout_height="52dp"
+                    android:layout_width="@dimen/qty_button"
+                    android:layout_height="@dimen/qty_button"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:minWidth="52dp"
-                    android:minHeight="52dp"
+                    android:minWidth="@dimen/qty_button"
+                    android:minHeight="@dimen/qty_button"
                     android:padding="0dp"
-                    android:text="−"
-                    android:textSize="22sp" />
+                    android:text="@string/qty_minus"
+                    android:textSize="@dimen/text_title" />
 
                 <TextView
                     android:id="@+id/qty"
                     android:layout_width="56dp"
                     android:layout_height="wrap_content"
                     android:gravity="center"
-                    android:text="1"
-                    android:textSize="18sp"
+                    android:text="@string/qty_default"
+                    android:textSize="@dimen/text_qty"
                     android:textStyle="bold" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/plus"
                     style="@style/Widget.ClickMovil.Button.Outlined"
-                    android:layout_width="52dp"
-                    android:layout_height="52dp"
+                    android:layout_width="@dimen/qty_button"
+                    android:layout_height="@dimen/qty_button"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:minWidth="52dp"
-                    android:minHeight="52dp"
+                    android:minWidth="@dimen/qty_button"
+                    android:minHeight="@dimen/qty_button"
                     android:padding="0dp"
-                    android:text="+"
-                    android:textSize="22sp" />
+                    android:text="@string/qty_plus"
+                    android:textSize="@dimen/text_title" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
@@ -163,9 +163,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_sm"
                 android:layout_marginBottom="@dimen/space_md"
-                android:text="Puedes retractarte en los términos informados antes del envío. El canal de reclamos está en Perfil."
+                android:text="@string/retract_hint"
                 android:textColor="@color/muted"
-                android:textSize="12sp" />
+                android:textSize="@dimen/text_small" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

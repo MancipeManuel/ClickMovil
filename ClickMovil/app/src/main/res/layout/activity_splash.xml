@@ -40,9 +40,9 @@
                 android:backgroundTint="@color/teal_2"
                 android:elevation="4dp"
                 android:gravity="center"
-                android:text="CM"
+                android:text="@string/brand_mark"
                 android:textColor="@color/navy"
-                android:textSize="22sp"
+                android:textSize="@dimen/text_title"
                 android:textStyle="bold" />
 
             <TextView
