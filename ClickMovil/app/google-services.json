@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "54729790688",
+    "project_id": "clickmovil-15bcd",
+    "storage_bucket": "clickmovil-15bcd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:54729790688:android:c4c1665e31d12c218c6c85",
+        "android_client_info": {
+          "package_name": "co.edu.ucompensar.clickmovil"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBdPaoth_038U47If5sMJpZBOulzt-nF34"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
