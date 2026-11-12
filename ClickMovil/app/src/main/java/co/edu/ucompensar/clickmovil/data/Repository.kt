@@ -1,34 +1,59 @@
 package co.edu.ucompensar.clickmovil.data
 
-import android.content.ContentValues
 import android.content.Context
-import co.edu.ucompensar.clickmovil.model.SalesTotals
-import android.database.Cursor
-import android.database.sqlite.SQLiteDatabase
 import co.edu.ucompensar.clickmovil.model.CartLine
 import co.edu.ucompensar.clickmovil.model.OpResult
 import co.edu.ucompensar.clickmovil.model.OrderItem
 import co.edu.ucompensar.clickmovil.model.Product
 import co.edu.ucompensar.clickmovil.model.Role
+import co.edu.ucompensar.clickmovil.model.SalesTotals
 import co.edu.ucompensar.clickmovil.model.StoreOrder
 import co.edu.ucompensar.clickmovil.model.User
-import co.edu.ucompensar.clickmovil.util.Password
 import co.edu.ucompensar.clickmovil.util.shippingFor
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.tasks.await
 import kotlin.random.Random
 
+/**
+ * Repositorio cloud de ClickMóvil.
+ * Autenticación: Firebase Auth (correo/contraseña).
+ * Datos: Cloud Firestore (usuarios, productos, carrito, pedidos).
+ * Imágenes: Firebase Storage vía [ImageUploader] con fallback local.
+ */
 class Repository(context: Context) {
-    private val recovery = context.applicationContext.getSharedPreferences("clickmovil_recovery", Context.MODE_PRIVATE)
-    private val db: SQLiteDatabase = DbHelper.get(context).writableDatabase
+    private val appContext = context.applicationContext
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
+    private val images = ImageUploader(appContext)
 
-    fun login(email: String, password: String): User? {
-        val user = userByEmail(email.trim().lowercase()) ?: return null
-        if (!user.active) return null
-        val hash = passwordHash(user.id) ?: return null
-        if (hash != Password.hash(password)) return null
-        return user
+    private val users = db.collection("users")
+    private val products = db.collection("products")
+    private val carts = db.collection("carts")
+    private val orders = db.collection("orders")
+    private val meta = db.collection("meta")
+
+    suspend fun login(email: String, password: String): User? {
+        return try {
+            val result = auth.signInWithEmailAndPassword(email.trim().lowercase(), password).await()
+            val uid = result.user?.uid ?: return null
+            val user = userById(uid) ?: return null
+            if (!user.active) {
+                auth.signOut()
+                return null
+            }
+            user
+        } catch (_: Exception) {
+            null
+        }
     }
 
-    fun register(
+    suspend fun register(
         name: String,
         email: String,
         password: String,
@@ -40,62 +65,61 @@ class Repository(context: Context) {
             return OpResult.Err("No puedes asignarte el rol de administrador.")
         }
         val cleanEmail = email.trim().lowercase()
-        if (userByEmail(cleanEmail) != null) {
-            return OpResult.Err("Ese correo ya está registrado.")
-        }
-        val values = ContentValues().apply {
-            put("name", name.trim())
-            put("email", cleanEmail)
-            put("password_hash", Password.hash(password))
-            put("phone", phone.trim())
-            put("city", city.trim())
-            put("role", role.name)
-            put("active", 1)
-        }
-        val id = db.insert("users", null, values)
-        val user = userById(id) ?: return OpResult.Err("No se pudo crear la cuenta.")
-        return OpResult.Ok(user)
-    }
-
-    fun userById(id: Long): User? {
-        db.rawQuery("SELECT * FROM users WHERE id = ?", arrayOf(id.toString())).use { cursor ->
-            if (!cursor.moveToFirst()) return null
-            return cursor.toUser()
+        return try {
+            val created = auth.createUserWithEmailAndPassword(cleanEmail, password).await()
+            val uid = created.user?.uid ?: return OpResult.Err("No se pudo crear la cuenta.")
+            val user = User(
+                id = uid,
+                name = name.trim(),
+                email = cleanEmail,
+                phone = phone.trim(),
+                city = city.trim(),
+                role = role,
+                active = true
+            )
+            users.document(uid).set(user.toMap()).await()
+            OpResult.Ok(user)
+        } catch (e: FirebaseAuthException) {
+            OpResult.Err(authMessage(e))
+        } catch (e: Exception) {
+            OpResult.Err(e.message ?: "No se pudo registrar.")
         }
     }
 
-    fun users(): List<User> {
-        val list = mutableListOf<User>()
-        db.rawQuery("SELECT * FROM users ORDER BY name", null).use { cursor ->
-            while (cursor.moveToNext()) list.add(cursor.toUser())
-        }
-        return list
+    suspend fun userById(id: String): User? {
+        val snap = users.document(id).get().await()
+        if (!snap.exists()) return null
+        return snap.toUser(id)
     }
 
-    fun updateProfile(userId: Long, name: String, phone: String, city: String): OpResult<User> {
+    suspend fun users(): List<User> {
+        return users.get().await().documents.mapNotNull { it.toUser(it.id) }
+            .sortedBy { it.name.lowercase() }
+    }
+
+    suspend fun updateProfile(userId: String, name: String, phone: String, city: String): OpResult<User> {
         if (name.isBlank()) return OpResult.Err("El nombre es obligatorio.")
-        val values = ContentValues().apply {
-            put("name", name.trim())
-            put("phone", phone.trim())
-            put("city", city.trim())
-        }
-        db.update("users", values, "id = ?", arrayOf(userId.toString()))
-        val user = userById(userId) ?: return OpResult.Err("No se encontró la cuenta.")
-        return OpResult.Ok(user)
+        users.document(userId).update(
+            mapOf(
+                "name" to name.trim(),
+                "phone" to phone.trim(),
+                "city" to city.trim()
+            )
+        ).await()
+        return userById(userId)?.let { OpResult.Ok(it) } ?: OpResult.Err("No se encontró la cuenta.")
     }
 
-    fun setActive(actorId: Long, userId: Long, active: Boolean): OpResult<Unit> {
+    suspend fun setActive(actorId: String, userId: String, active: Boolean): OpResult<Unit> {
         if (actorId == userId) return OpResult.Err("No puedes desactivar tu propia cuenta.")
         val target = userById(userId) ?: return OpResult.Err("Usuario no encontrado.")
         if (target.role == Role.ADMIN && !active && activeAdmins() <= 1) {
             return OpResult.Err("Debe quedar al menos un administrador activo.")
         }
-        val values = ContentValues().apply { put("active", if (active) 1 else 0) }
-        db.update("users", values, "id = ?", arrayOf(userId.toString()))
+        users.document(userId).update("active", active).await()
         return OpResult.Ok(Unit)
     }
 
-    fun setRole(actorId: Long, userId: Long, role: Role): OpResult<Unit> {
+    suspend fun setRole(actorId: String, userId: String, role: Role): OpResult<Unit> {
         val target = userById(userId) ?: return OpResult.Err("Usuario no encontrado.")
         if (actorId == userId && role != Role.ADMIN) {
             return OpResult.Err("No puedes quitarte el rol de administrador.")
@@ -103,37 +127,34 @@ class Repository(context: Context) {
         if (target.role == Role.ADMIN && role != Role.ADMIN && activeAdmins() <= 1) {
             return OpResult.Err("Debe quedar al menos un administrador.")
         }
-        val values = ContentValues().apply { put("role", role.name) }
-        db.update("users", values, "id = ?", arrayOf(userId.toString()))
+        users.document(userId).update("role", role.name).await()
         return OpResult.Ok(Unit)
     }
 
-    fun startRecovery(email: String): OpResult<String> {
-        val user = userByEmail(email.trim().lowercase())
-            ?: return OpResult.Err("No encontramos una cuenta con ese correo.")
-        if (!user.active) return OpResult.Err("Esa cuenta está desactivada. Escribe al administrador.")
-        val code = (100000 + Random.nextInt(900000)).toString()
-        recovery.edit().putString(KEY_EMAIL, user.email).putString(KEY_CODE, code).apply()
-        return OpResult.Ok(code)
-    }
-
-    fun resetPassword(email: String, code: String, newPassword: String): OpResult<Unit> {
-        if (newPassword.length < 6) return OpResult.Err("La contraseña debe tener al menos 6 caracteres.")
-        val expectedEmail = recovery.getString(KEY_EMAIL, null)
-        val expectedCode = recovery.getString(KEY_CODE, null)
-        if (expectedEmail == null || !expectedEmail.equals(email.trim(), ignoreCase = true) || expectedCode != code.trim()) {
-            return OpResult.Err("El código no coincide con el correo.")
+    /** Recuperación real con correo de Firebase Auth. */
+    suspend fun startRecovery(email: String): OpResult<String> {
+        val clean = email.trim().lowercase()
+        if (clean.isBlank()) return OpResult.Err("Escribe el correo de la cuenta.")
+        return try {
+            auth.sendPasswordResetEmail(clean).await()
+            OpResult.Ok("Te enviamos un enlace de recuperación a $clean")
+        } catch (e: Exception) {
+            OpResult.Err(e.message ?: "No se pudo enviar el correo de recuperación.")
         }
-        val user = userByEmail(expectedEmail) ?: return OpResult.Err("No encontramos la cuenta.")
-        val values = ContentValues().apply { put("password_hash", Password.hash(newPassword)) }
-        db.update("users", values, "id = ?", arrayOf(user.id.toString()))
-        recovery.edit().clear().apply()
-        return OpResult.Ok(Unit)
     }
 
-    fun saveManagedUser(
-        actorId: Long,
-        userId: Long?,
+    suspend fun resetPassword(email: String, code: String, newPassword: String): OpResult<Unit> {
+        // Con Firebase Auth la recuperación se completa desde el correo.
+        // Se conserva la firma para no romper la pantalla; el flujo usa el enlace.
+        if (newPassword.length < 6) return OpResult.Err("La contraseña debe tener al menos 6 caracteres.")
+        return OpResult.Err(
+            "Abre el enlace que llegó a $email para definir la nueva contraseña. Código local: $code"
+        )
+    }
+
+    suspend fun saveManagedUser(
+        actorId: String,
+        userId: String?,
         name: String,
         email: String,
         password: String,
@@ -141,118 +162,86 @@ class Repository(context: Context) {
         city: String,
         role: Role
     ): OpResult<User> {
-        if (userById(actorId)?.role != Role.ADMIN) return OpResult.Err("Solo un administrador puede gestionar cuentas.")
+        if (userById(actorId)?.role != Role.ADMIN) {
+            return OpResult.Err("Solo un administrador puede gestionar cuentas.")
+        }
         if (name.isBlank() || email.isBlank()) return OpResult.Err("Nombre y correo son obligatorios.")
         val cleanEmail = email.trim().lowercase()
-        val existingEmail = userByEmail(cleanEmail)
-        if (existingEmail != null && existingEmail.id != userId) {
-            return OpResult.Err("Ese correo ya está registrado.")
-        }
         if (userId == null) {
             if (password.length < 6) return OpResult.Err("La contraseña debe tener al menos 6 caracteres.")
-            val values = ContentValues().apply {
-                put("name", name.trim())
-                put("email", cleanEmail)
-                put("password_hash", Password.hash(password))
-                put("phone", phone.trim())
-                put("city", city.trim())
-                put("role", role.name)
-                put("active", 1)
-            }
-            val id = db.insert("users", null, values)
-            return userById(id)?.let { OpResult.Ok(it) } ?: OpResult.Err("No se pudo crear el usuario.")
+            return createUserWithSecondaryAuth(name, cleanEmail, password, phone, city, role)
         }
         val target = userById(userId) ?: return OpResult.Err("Usuario no encontrado.")
         if (target.role == Role.ADMIN && role != Role.ADMIN && activeAdmins() <= 1) {
             return OpResult.Err("Debe quedar al menos un administrador.")
         }
-        val values = ContentValues().apply {
-            put("name", name.trim())
-            put("email", cleanEmail)
-            put("phone", phone.trim())
-            put("city", city.trim())
-            put("role", role.name)
-            if (password.isNotBlank()) put("password_hash", Password.hash(password))
-        }
-        db.update("users", values, "id = ?", arrayOf(userId.toString()))
+        val data = mutableMapOf<String, Any>(
+            "name" to name.trim(),
+            "email" to cleanEmail,
+            "phone" to phone.trim(),
+            "city" to city.trim(),
+            "role" to role.name
+        )
+        users.document(userId).update(data).await()
         return userById(userId)?.let { OpResult.Ok(it) } ?: OpResult.Err("No se pudo actualizar el usuario.")
     }
 
-    fun deleteUser(actorId: Long, userId: Long): OpResult<Unit> {
+    suspend fun deleteUser(actorId: String, userId: String): OpResult<Unit> {
         if (actorId == userId) return OpResult.Err("No puedes eliminar tu propia cuenta.")
         val target = userById(userId) ?: return OpResult.Err("Usuario no encontrado.")
         if (target.role == Role.ADMIN && activeAdmins() <= 1) {
             return OpResult.Err("Debe quedar al menos un administrador.")
         }
-        if (countOf("orders", "buyer_id = ?", userId) > 0 ||
-            countOf("order_items", "seller_id = ?", userId) > 0 ||
-            countOf("products", "seller_id = ?", userId) > 0
-        ) {
+        val hasOrders = orders.whereEqualTo("buyerId", userId).limit(1).get().await().size() > 0
+        val sells = products.whereEqualTo("sellerId", userId).limit(1).get().await().size() > 0
+        if (hasOrders || sells) {
             return OpResult.Err("Esta cuenta tiene productos o pedidos. Desactívala para conservar la trazabilidad.")
         }
-        db.delete("cart_items", "user_id = ?", arrayOf(userId.toString()))
-        db.delete("users", "id = ?", arrayOf(userId.toString()))
+        carts.document(userId).delete().await()
+        users.document(userId).delete().await()
         return OpResult.Ok(Unit)
     }
 
-    fun salesTotals(): SalesTotals {
-        val orders = allOrders()
+    suspend fun salesTotals(): SalesTotals {
+        val list = allOrders()
         return SalesTotals(
-            count = orders.size,
-            revenue = orders.filter { it.status != "CANCELADO" }.sumOf { it.total },
-            paid = orders.count { it.status == "PAGADO" },
-            shipped = orders.count { it.status == "ENVIADO" },
-            delivered = orders.count { it.status == "ENTREGADO" },
-            cancelled = orders.count { it.status == "CANCELADO" }
+            count = list.size,
+            revenue = list.filter { it.status != "CANCELADO" }.sumOf { it.total },
+            paid = list.count { it.status == "PAGADO" },
+            shipped = list.count { it.status == "ENVIADO" },
+            delivered = list.count { it.status == "ENTREGADO" },
+            cancelled = list.count { it.status == "CANCELADO" }
         )
     }
 
-    private fun countOf(table: String, where: String, id: Long): Int {
-        db.rawQuery("SELECT COUNT(*) FROM $table WHERE $where", arrayOf(id.toString())).use { cursor ->
-            cursor.moveToFirst()
-            return cursor.getInt(0)
-        }
-    }
-
-    fun products(category: String?, query: String?, sellerId: Long?, includeInactive: Boolean): List<Product> {
-        val where = mutableListOf<String>()
-        val args = mutableListOf<String>()
-        if (!includeInactive) where.add("active = 1")
-        if (!category.isNullOrBlank()) {
-            where.add("category = ?")
-            args.add(category)
-        }
+    suspend fun products(
+        category: String?,
+        query: String?,
+        sellerId: String?,
+        includeInactive: Boolean
+    ): List<Product> {
+        var list = products.get().await().documents.mapNotNull { it.toProduct(it.id) }
+        if (!includeInactive) list = list.filter { it.active }
+        if (!category.isNullOrBlank()) list = list.filter { it.category == category }
+        if (sellerId != null) list = list.filter { it.sellerId == sellerId }
         if (!query.isNullOrBlank()) {
-            where.add("(name LIKE ? OR compatibility LIKE ?)")
-            args.add("%${query.trim()}%")
-            args.add("%${query.trim()}%")
+            val q = query.trim().lowercase()
+            list = list.filter {
+                it.name.lowercase().contains(q) || it.compatibility.lowercase().contains(q)
+            }
         }
-        if (sellerId != null) {
-            where.add("seller_id = ?")
-            args.add(sellerId.toString())
-        }
-        val sql = buildString {
-            append("SELECT * FROM products")
-            if (where.isNotEmpty()) append(" WHERE ").append(where.joinToString(" AND "))
-            append(" ORDER BY name")
-        }
-        val list = mutableListOf<Product>()
-        db.rawQuery(sql, args.toTypedArray()).use { cursor ->
-            while (cursor.moveToNext()) list.add(cursor.toProduct())
-        }
-        return list
+        return list.sortedBy { it.name.lowercase() }
     }
 
-    fun product(id: Long): Product? {
-        db.rawQuery("SELECT * FROM products WHERE id = ?", arrayOf(id.toString())).use { cursor ->
-            if (!cursor.moveToFirst()) return null
-            return cursor.toProduct()
-        }
+    suspend fun product(id: String): Product? {
+        val snap = products.document(id).get().await()
+        if (!snap.exists()) return null
+        return snap.toProduct(id)
     }
 
-    fun saveProduct(
+    suspend fun saveProduct(
         actor: User,
-        productId: Long?,
+        productId: String?,
         name: String,
         description: String,
         price: Long,
@@ -260,7 +249,7 @@ class Repository(context: Context) {
         compatibility: String,
         stock: Int,
         imagePath: String?
-    ): OpResult<Long> {
+    ): OpResult<String> {
         if (name.isBlank()) return OpResult.Err("El nombre es obligatorio.")
         if (price <= 0) return OpResult.Err("El precio debe ser mayor que cero.")
         if (stock < 0) return OpResult.Err("Las existencias no pueden ser negativas.")
@@ -273,342 +262,406 @@ class Repository(context: Context) {
             return OpResult.Err("Un comprador no puede publicar productos.")
         }
         val sellerId = existing?.sellerId ?: actor.id
-        val values = ContentValues().apply {
-            put("seller_id", sellerId)
-            put("name", name.trim())
-            put("description", description.trim())
-            put("price", price)
-            put("category", category)
-            put("compatibility", compatibility.trim().ifBlank { "Universal" })
-            put("stock", stock)
-            put("image_path", imagePath)
-            put("active", 1)
-        }
-        val id = if (existing == null) {
-            db.insert("products", null, values)
+        val id = existing?.id ?: products.document().id
+        val remoteImage = if (!imagePath.isNullOrBlank() && imagePath != existing?.imagePath) {
+            images.uploadProductImage(imagePath, id)
         } else {
-            db.update("products", values, "id = ?", arrayOf(existing.id.toString()))
-            existing.id
+            imagePath ?: existing?.imagePath
         }
+        val data = mapOf(
+            "sellerId" to sellerId,
+            "name" to name.trim(),
+            "description" to description.trim(),
+            "price" to price,
+            "category" to category,
+            "compatibility" to compatibility.trim().ifBlank { "Universal" },
+            "stock" to stock,
+            "imagePath" to remoteImage,
+            "active" to true
+        )
+        products.document(id).set(data, SetOptions.merge()).await()
         return OpResult.Ok(id)
     }
 
-    fun retireProduct(actor: User, productId: Long): OpResult<Unit> {
+    suspend fun retireProduct(actor: User, productId: String): OpResult<Unit> {
         val existing = product(productId) ?: return OpResult.Err("Producto no encontrado.")
         if (actor.role == Role.VENDEDOR && existing.sellerId != actor.id) {
             return OpResult.Err("No puedes retirar productos de otro vendedor.")
         }
         if (actor.role == Role.COMPRADOR) return OpResult.Err("No tienes permiso para esta acción.")
-        val values = ContentValues().apply { put("active", 0) }
-        db.update("products", values, "id = ?", arrayOf(productId.toString()))
+        products.document(productId).update("active", false).await()
         return OpResult.Ok(Unit)
     }
 
-    fun cart(userId: Long): List<CartLine> {
-        val sql = """
-            SELECT c.id AS cart_id, c.quantity AS cart_qty,
-                   p.id, p.seller_id, p.name, p.description, p.price, p.category,
-                   p.compatibility, p.stock, p.image_path, p.active
-            FROM cart_items c
-            JOIN products p ON p.id = c.product_id
-            WHERE c.user_id = ?
-            ORDER BY p.name
-        """.trimIndent()
-        val list = mutableListOf<CartLine>()
-        db.rawQuery(sql, arrayOf(userId.toString())).use { cursor ->
-            while (cursor.moveToNext()) {
-                list.add(
-                    CartLine(
-                        itemId = cursor.getLong(cursor.getColumnIndexOrThrow("cart_id")),
-                        product = cursor.toProduct(),
-                        quantity = cursor.getInt(cursor.getColumnIndexOrThrow("cart_qty"))
-                    )
-                )
-            }
+    suspend fun cart(userId: String): List<CartLine> {
+        val snap = carts.document(userId).collection("items").get().await()
+        val lines = mutableListOf<CartLine>()
+        for (doc in snap.documents) {
+            val productId = doc.getString("productId") ?: continue
+            val quantity = doc.getLong("quantity")?.toInt() ?: continue
+            val product = product(productId) ?: continue
+            lines.add(CartLine(itemId = doc.id, product = product, quantity = quantity))
         }
-        return list
+        return lines.sortedBy { it.product.name.lowercase() }
     }
 
-    fun addToCart(userId: Long, productId: Long, quantity: Int): OpResult<Unit> {
+    suspend fun addToCart(userId: String, productId: String, quantity: Int): OpResult<Unit> {
         val product = product(productId) ?: return OpResult.Err("El producto no existe.")
         if (!product.active) return OpResult.Err("Este producto ya no está publicado.")
         if (product.stock <= 0) return OpResult.Err("El producto está agotado.")
-        val current = cartQuantity(userId, productId)
+        val itemRef = carts.document(userId).collection("items").document(productId)
+        val current = itemRef.get().await().getLong("quantity")?.toInt() ?: 0
         val next = current + quantity
         if (next > product.stock) {
             return OpResult.Err("Solo hay ${product.stock} unidades disponibles.")
         }
-        if (current == 0) {
-            val values = ContentValues().apply {
-                put("user_id", userId)
-                put("product_id", productId)
-                put("quantity", quantity)
-            }
-            db.insert("cart_items", null, values)
-        } else {
-            val values = ContentValues().apply { put("quantity", next) }
-            db.update("cart_items", values, "user_id = ? AND product_id = ?", arrayOf(userId.toString(), productId.toString()))
-        }
+        itemRef.set(mapOf("productId" to productId, "quantity" to next)).await()
         return OpResult.Ok(Unit)
     }
 
-    fun updateCartQuantity(userId: Long, productId: Long, quantity: Int): OpResult<Unit> {
+    suspend fun updateCartQuantity(userId: String, productId: String, quantity: Int): OpResult<Unit> {
+        val itemRef = carts.document(userId).collection("items").document(productId)
         if (quantity <= 0) {
-            db.delete("cart_items", "user_id = ? AND product_id = ?", arrayOf(userId.toString(), productId.toString()))
+            itemRef.delete().await()
             return OpResult.Ok(Unit)
         }
         val product = product(productId) ?: return OpResult.Err("El producto no existe.")
         if (quantity > product.stock) return OpResult.Err("Solo hay ${product.stock} unidades disponibles.")
-        val values = ContentValues().apply { put("quantity", quantity) }
-        db.update("cart_items", values, "user_id = ? AND product_id = ?", arrayOf(userId.toString(), productId.toString()))
+        itemRef.set(mapOf("productId" to productId, "quantity" to quantity)).await()
         return OpResult.Ok(Unit)
     }
 
-    fun checkout(buyerId: Long, city: String): OpResult<StoreOrder> {
+    /**
+     * Checkout con pasarela certificada simulada estilo ePayco:
+     * genera referencia EPAYCO-xxxxx y deja el pedido en estado PAGADO.
+     */
+    suspend fun checkout(buyerId: String, city: String): OpResult<StoreOrder> {
         val cityClean = city.trim()
         if (cityClean.isEmpty()) return OpResult.Err("Escribe la ciudad de entrega.")
-        db.beginTransaction()
-        try {
-            val lines = cart(buyerId)
-            if (lines.isEmpty()) return OpResult.Err("El carrito está vacío.")
-            var subtotal = 0L
-            for (line in lines) {
-                val fresh = product(line.product.id) ?: return OpResult.Err("Un producto ya no está disponible.")
-                if (!fresh.active || fresh.stock < line.quantity) {
-                    return OpResult.Err("No hay existencias suficientes de ${fresh.name}.")
-                }
-                subtotal += fresh.price * line.quantity
+        val lines = cart(buyerId)
+        if (lines.isEmpty()) return OpResult.Err("El carrito está vacío.")
+        var subtotal = 0L
+        for (line in lines) {
+            val fresh = product(line.product.id) ?: return OpResult.Err("Un producto ya no está disponible.")
+            if (!fresh.active || fresh.stock < line.quantity) {
+                return OpResult.Err("No hay existencias suficientes de ${fresh.name}.")
             }
-            val shipping = shippingFor(cityClean)
-            val values = ContentValues().apply {
-                put("code", "TMP")
-                put("buyer_id", buyerId)
-                put("total", subtotal + shipping)
-                put("shipping", shipping)
-                put("status", "PAGADO")
-                put("payment_ref", "PAY-${10000 + Random.nextInt(90000)}")
-                put("city", cityClean)
-                put("created_at", System.currentTimeMillis())
-            }
-            val orderId = db.insert("orders", null, values)
-            val code = "CM-${1000 + orderId}"
-            db.update("orders", ContentValues().apply { put("code", code) }, "id = ?", arrayOf(orderId.toString()))
-            for (line in lines) {
-                val fresh = product(line.product.id)!!
-                val item = ContentValues().apply {
-                    put("order_id", orderId)
-                    put("product_id", fresh.id)
-                    put("seller_id", fresh.sellerId)
-                    put("product_name", fresh.name)
-                    put("quantity", line.quantity)
-                    put("unit_price", fresh.price)
-                }
-                db.insert("order_items", null, item)
-                db.execSQL(
-                    "UPDATE products SET stock = stock - ? WHERE id = ?",
-                    arrayOf(line.quantity, fresh.id)
-                )
-            }
-            db.delete("cart_items", "user_id = ?", arrayOf(buyerId.toString()))
-            db.setTransactionSuccessful()
-            val order = orderById(orderId) ?: return OpResult.Err("No se pudo leer el pedido.")
-            return OpResult.Ok(order)
-        } finally {
-            db.endTransaction()
+            subtotal += fresh.price * line.quantity
         }
-    }
-
-    fun ordersForBuyer(buyerId: Long): List<StoreOrder> = ordersWhere("o.buyer_id = ?", arrayOf(buyerId.toString()))
-
-    fun ordersForSeller(sellerId: Long): List<StoreOrder> {
-        return ordersWhere(
-            "o.id IN (SELECT order_id FROM order_items WHERE seller_id = ?)",
-            arrayOf(sellerId.toString())
+        val shipping = shippingFor(cityClean)
+        val orderRef = orders.document()
+        val paymentRef = "EPAYCO-${100000 + Random.nextInt(900000)}"
+        val code = "CM-${orderRef.id.takeLast(6).uppercase()}"
+        val buyer = userById(buyerId)
+        val items = lines.map { line ->
+            val fresh = product(line.product.id)!!
+            mapOf(
+                "productId" to fresh.id,
+                "sellerId" to fresh.sellerId,
+                "productName" to fresh.name,
+                "quantity" to line.quantity,
+                "unitPrice" to fresh.price
+            )
+        }
+        val orderData = mapOf(
+            "code" to code,
+            "buyerId" to buyerId,
+            "buyerName" to (buyer?.name ?: ""),
+            "total" to (subtotal + shipping),
+            "shipping" to shipping,
+            "status" to "PAGADO",
+            "paymentRef" to paymentRef,
+            "paymentGateway" to "ePayco",
+            "city" to cityClean,
+            "createdAt" to System.currentTimeMillis(),
+            "items" to items
         )
-    }
-
-    fun allOrders(): List<StoreOrder> = ordersWhere("1 = 1", emptyArray())
-
-    fun cancelOrder(buyerId: Long, orderId: Long): OpResult<Unit> {
-        db.beginTransaction()
-        try {
-            val order = orderById(orderId) ?: return OpResult.Err("Pedido no encontrado.")
-            if (order.buyerId != buyerId) return OpResult.Err("Solo puedes cancelar tus pedidos.")
-            if (order.status != "PAGADO") {
-                return OpResult.Err("Solo se cancela un pedido pagado que todavía no fue enviado. El registro se conserva.")
+        db.runTransaction { tx ->
+            for (line in lines) {
+                val pref = products.document(line.product.id)
+                val snap = tx.get(pref)
+                val stock = snap.getLong("stock")?.toInt() ?: 0
+                if (stock < line.quantity) throw IllegalStateException("Stock insuficiente")
+                tx.update(pref, "stock", stock - line.quantity)
             }
-            for (item in order.items) {
-                db.execSQL(
-                    "UPDATE products SET stock = stock + ? WHERE id = ?",
-                    arrayOf(item.quantity, item.productId)
-                )
-            }
-            db.update("orders", ContentValues().apply { put("status", "CANCELADO") }, "id = ?", arrayOf(orderId.toString()))
-            db.setTransactionSuccessful()
-            return OpResult.Ok(Unit)
-        } finally {
-            db.endTransaction()
+            tx.set(orderRef, orderData)
+        }.await()
+        for (line in lines) {
+            carts.document(buyerId).collection("items").document(line.product.id).delete().await()
         }
+        return orderById(orderRef.id)?.let { OpResult.Ok(it) }
+            ?: OpResult.Err("No se pudo leer el pedido.")
     }
 
-    fun markShipped(sellerId: Long, orderId: Long): OpResult<Unit> {
+    suspend fun ordersForBuyer(buyerId: String): List<StoreOrder> {
+        return orders.whereEqualTo("buyerId", buyerId).get().await().documents
+            .mapNotNull { it.toOrder(it.id) }
+            .sortedByDescending { it.createdAt }
+    }
+
+    suspend fun ordersForSeller(sellerId: String): List<StoreOrder> {
+        return allOrders().filter { order -> order.items.any { it.sellerId == sellerId } }
+    }
+
+    suspend fun allOrders(): List<StoreOrder> {
+        return orders.get().await().documents
+            .mapNotNull { it.toOrder(it.id) }
+            .sortedByDescending { it.createdAt }
+    }
+
+    suspend fun cancelOrder(buyerId: String, orderId: String): OpResult<Unit> {
+        val order = orderById(orderId) ?: return OpResult.Err("Pedido no encontrado.")
+        if (order.buyerId != buyerId) return OpResult.Err("Solo puedes cancelar tus pedidos.")
+        if (order.status != "PAGADO") {
+            return OpResult.Err("Solo se cancela un pedido pagado que todavía no fue enviado. El registro se conserva.")
+        }
+        db.runTransaction { tx ->
+            for (item in order.items) {
+                val pref = products.document(item.productId)
+                val snap = tx.get(pref)
+                val stock = snap.getLong("stock")?.toInt() ?: 0
+                tx.update(pref, "stock", stock + item.quantity)
+            }
+            tx.update(orders.document(orderId), "status", "CANCELADO")
+        }.await()
+        return OpResult.Ok(Unit)
+    }
+
+    suspend fun markShipped(sellerId: String, orderId: String): OpResult<Unit> {
         val order = orderById(orderId) ?: return OpResult.Err("Pedido no encontrado.")
         if (order.items.none { it.sellerId == sellerId }) {
             return OpResult.Err("Este pedido no incluye tus productos.")
         }
         if (order.status != "PAGADO") return OpResult.Err("El pedido no está pendiente de envío.")
-        db.update("orders", ContentValues().apply { put("status", "ENVIADO") }, "id = ?", arrayOf(orderId.toString()))
+        orders.document(orderId).update("status", "ENVIADO").await()
         return OpResult.Ok(Unit)
     }
 
-    fun markDelivered(orderId: Long): OpResult<Unit> {
+    suspend fun markDelivered(orderId: String): OpResult<Unit> {
         val order = orderById(orderId) ?: return OpResult.Err("Pedido no encontrado.")
         if (order.status == "CANCELADO") return OpResult.Err("Un pedido cancelado no se marca como entregado.")
-        db.update("orders", ContentValues().apply { put("status", "ENTREGADO") }, "id = ?", arrayOf(orderId.toString()))
+        orders.document(orderId).update("status", "ENTREGADO").await()
         return OpResult.Ok(Unit)
     }
 
-    fun lowStockCount(sellerId: Long): Int {
-        db.rawQuery(
-            "SELECT COUNT(*) FROM products WHERE seller_id = ? AND active = 1 AND stock <= 5",
-            arrayOf(sellerId.toString())
-        ).use { cursor ->
-            cursor.moveToFirst()
-            return cursor.getInt(0)
-        }
+    suspend fun lowStockCount(sellerId: String): Int {
+        return products(null, null, sellerId, includeInactive = false).count { it.stock <= 5 }
     }
 
-    private fun ordersWhere(where: String, args: Array<String>): List<StoreOrder> {
-        val sql = """
-            SELECT o.*, u.name
-            FROM orders o
-            JOIN users u ON u.id = o.buyer_id
-            WHERE $where
-            ORDER BY o.created_at DESC
-        """.trimIndent()
-        val list = mutableListOf<StoreOrder>()
-        db.rawQuery(sql, args).use { cursor ->
-            while (cursor.moveToNext()) {
-                val id = cursor.getLong(cursor.getColumnIndexOrThrow("id"))
-                list.add(cursor.toOrder(itemsOf(id)))
-            }
+    /** Crea cuentas demo y catálogo inicial una sola vez. */
+    suspend fun ensureDemoData() {
+        val flag = meta.document("seed").get().await()
+        if (flag.exists() && flag.getBoolean("done") == true) return
+        val sellerId = ensureAuthUser(
+            email = "vendedor@correo.com",
+            password = "123456",
+            name = "TecnoAccesorios",
+            phone = "3010000000",
+            city = "Bogotá",
+            role = Role.VENDEDOR
+        )
+        ensureAuthUser(
+            email = "ana@correo.com",
+            password = "123456",
+            name = "Ana López",
+            phone = "3000000000",
+            city = "Bogotá",
+            role = Role.COMPRADOR
+        )
+        ensureAuthUser(
+            email = "admin@correo.com",
+            password = "admin123",
+            name = "Admin Click",
+            phone = "3020000000",
+            city = "Bogotá",
+            role = Role.ADMIN
+        )
+        if (products.limit(1).get().await().isEmpty && sellerId != null) {
+            seedProducts(sellerId)
         }
-        return list
+        meta.document("seed").set(mapOf("done" to true, "at" to FieldValue.serverTimestamp())).await()
     }
 
-    private fun orderById(id: Long): StoreOrder? {
-        val sql = """
-            SELECT o.*, u.name
-            FROM orders o
-            JOIN users u ON u.id = o.buyer_id
-            WHERE o.id = ?
-        """.trimIndent()
-        db.rawQuery(sql, arrayOf(id.toString())).use { cursor ->
-            if (!cursor.moveToFirst()) return null
-            return cursor.toOrder(itemsOf(id))
-        }
-    }
-
-    private fun itemsOf(orderId: Long): List<OrderItem> {
-        val list = mutableListOf<OrderItem>()
-        db.rawQuery("SELECT * FROM order_items WHERE order_id = ?", arrayOf(orderId.toString())).use { cursor ->
-            while (cursor.moveToNext()) {
-                list.add(
-                    OrderItem(
-                        id = cursor.getLong(cursor.getColumnIndexOrThrow("id")),
-                        orderId = cursor.getLong(cursor.getColumnIndexOrThrow("order_id")),
-                        productId = cursor.getLong(cursor.getColumnIndexOrThrow("product_id")),
-                        sellerId = cursor.getLong(cursor.getColumnIndexOrThrow("seller_id")),
-                        productName = cursor.getString(cursor.getColumnIndexOrThrow("product_name")),
-                        quantity = cursor.getInt(cursor.getColumnIndexOrThrow("quantity")),
-                        unitPrice = cursor.getLong(cursor.getColumnIndexOrThrow("unit_price"))
-                    )
+    private suspend fun seedProducts(sellerId: String) {
+        val catalog = listOf(
+            Seed("Funda silicona mate", "Protección contra golpes leves. Material flexible.", 32_900L, "Fundas", "Galaxy A55", 12),
+            Seed("Cargador USB-C 20W", "Carga rápida de 20W. Incluye cable corto.", 49_900L, "Carga", "Universal", 8),
+            Seed("Audífonos Bluetooth", "Estuche de carga y micrófono. Compatibles con Android.", 79_900L, "Audio", "Universal", 6),
+            Seed("Batería externa 10.000 mAh", "Dos salidas. Carga el celular al menos dos veces.", 89_000L, "Energía", "Universal", 5),
+            Seed("Cable USB-C 1 m", "Cable de carga y datos. Refuerzo en las puntas.", 19_900L, "Carga", "USB-C", 20),
+            Seed("Soporte para carro", "Sujeción en la rejilla del aire.", 25_900L, "Soportes", "Universal", 15),
+            Seed("Protector de pantalla", "Vidrio templado. Incluye kit de instalación.", 18_900L, "Fundas", "Galaxy A55", 30),
+            Seed("Adaptador USB-C a jack", "Salida de audio de 3.5 mm.", 22_900L, "Adaptadores", "USB-C", 11)
+        )
+        for (item in catalog) {
+            products.document().set(
+                mapOf(
+                    "sellerId" to sellerId,
+                    "name" to item.name,
+                    "description" to item.description,
+                    "price" to item.price,
+                    "category" to item.category,
+                    "compatibility" to item.compatibility,
+                    "stock" to item.stock,
+                    "imagePath" to null,
+                    "active" to true
                 )
-            }
-        }
-        return list
-    }
-
-    private fun cartQuantity(userId: Long, productId: Long): Int {
-        db.rawQuery(
-            "SELECT quantity FROM cart_items WHERE user_id = ? AND product_id = ?",
-            arrayOf(userId.toString(), productId.toString())
-        ).use { cursor ->
-            if (!cursor.moveToFirst()) return 0
-            return cursor.getInt(0)
+            ).await()
         }
     }
 
-    private fun userByEmail(email: String): User? {
-        db.rawQuery("SELECT * FROM users WHERE email = ?", arrayOf(email)).use { cursor ->
-            if (!cursor.moveToFirst()) return null
-            return cursor.toUser()
+    private suspend fun ensureAuthUser(
+        email: String,
+        password: String,
+        name: String,
+        phone: String,
+        city: String,
+        role: Role
+    ): String? {
+        val existing = users.whereEqualTo("email", email).limit(1).get().await().documents.firstOrNull()
+        if (existing != null) return existing.id
+        return when (val created = createUserWithSecondaryAuth(name, email, password, phone, city, role)) {
+            is OpResult.Ok -> created.value.id
+            is OpResult.Err -> null
         }
     }
 
-    private fun passwordHash(userId: Long): String? {
-        db.rawQuery("SELECT password_hash FROM users WHERE id = ?", arrayOf(userId.toString())).use { cursor ->
-            if (!cursor.moveToFirst()) return null
-            return cursor.getString(0)
+    private suspend fun createUserWithSecondaryAuth(
+        name: String,
+        email: String,
+        password: String,
+        phone: String,
+        city: String,
+        role: Role
+    ): OpResult<User> {
+        return try {
+            val secondary = secondaryAuth()
+            val created = secondary.createUserWithEmailAndPassword(email, password).await()
+            val uid = created.user?.uid ?: return OpResult.Err("No se pudo crear el usuario.")
+            secondary.signOut()
+            val user = User(uid, name.trim(), email, phone.trim(), city.trim(), role, true)
+            users.document(uid).set(user.toMap()).await()
+            OpResult.Ok(user)
+        } catch (e: FirebaseAuthException) {
+            OpResult.Err(authMessage(e))
+        } catch (e: Exception) {
+            OpResult.Err(e.message ?: "No se pudo crear el usuario.")
         }
     }
 
-    private fun activeAdmins(): Int {
-        db.rawQuery(
-            "SELECT COUNT(*) FROM users WHERE role = ? AND active = 1",
-            arrayOf(Role.ADMIN.name)
-        ).use { cursor ->
-            cursor.moveToFirst()
-            return cursor.getInt(0)
+    private fun secondaryAuth(): FirebaseAuth {
+        val name = "ClickMovilSecondary"
+        val app = try {
+            FirebaseApp.getInstance(name)
+        } catch (_: IllegalStateException) {
+            val options = FirebaseApp.getInstance().options
+            FirebaseApp.initializeApp(
+                appContext,
+                FirebaseOptions.Builder()
+                    .setApiKey(options.apiKey!!)
+                    .setApplicationId(options.applicationId)
+                    .setProjectId(options.projectId)
+                    .setStorageBucket(options.storageBucket)
+                    .build(),
+                name
+            )
+        }
+        return FirebaseAuth.getInstance(app)
+    }
+
+    private suspend fun orderById(id: String): StoreOrder? {
+        val snap = orders.document(id).get().await()
+        if (!snap.exists()) return null
+        return snap.toOrder(id)
+    }
+
+    private suspend fun activeAdmins(): Int {
+        return users.whereEqualTo("role", Role.ADMIN.name).whereEqualTo("active", true)
+            .get().await().size()
+    }
+
+    private fun authMessage(e: FirebaseAuthException): String {
+        return when (e.errorCode) {
+            "ERROR_EMAIL_ALREADY_IN_USE" -> "Ese correo ya está registrado."
+            "ERROR_WEAK_PASSWORD" -> "La contraseña debe tener al menos 6 caracteres."
+            "ERROR_INVALID_EMAIL" -> "El correo no tiene un formato válido."
+            else -> e.message ?: "Error de autenticación."
         }
     }
 
-    private fun Cursor.toUser(): User {
+    private fun User.toMap(): Map<String, Any?> = mapOf(
+        "name" to name,
+        "email" to email,
+        "phone" to phone,
+        "city" to city,
+        "role" to role.name,
+        "active" to active
+    )
+
+    private fun com.google.firebase.firestore.DocumentSnapshot.toUser(id: String): User? {
+        val email = getString("email") ?: return null
         return User(
-            id = getLong(getColumnIndexOrThrow("id")),
-            name = getString(getColumnIndexOrThrow("name")),
-            email = getString(getColumnIndexOrThrow("email")),
-            phone = getString(getColumnIndexOrThrow("phone")),
-            city = getString(getColumnIndexOrThrow("city")),
-            role = Role.from(getString(getColumnIndexOrThrow("role"))),
-            active = getInt(getColumnIndexOrThrow("active")) == 1
+            id = id,
+            name = getString("name").orEmpty(),
+            email = email,
+            phone = getString("phone").orEmpty(),
+            city = getString("city").orEmpty(),
+            role = Role.from(getString("role").orEmpty()),
+            active = getBoolean("active") ?: true
         )
     }
 
-    private fun Cursor.toProduct(offset: Int = 0): Product {
-        fun idx(name: String) = getColumnIndexOrThrow(name).let { if (offset == 0) it else it }
+    private fun com.google.firebase.firestore.DocumentSnapshot.toProduct(id: String): Product? {
+        val name = getString("name") ?: return null
         return Product(
-            id = getLong(idx("id")),
-            sellerId = getLong(idx("seller_id")),
-            name = getString(idx("name")),
-            description = getString(idx("description")),
-            price = getLong(idx("price")),
-            category = getString(idx("category")),
-            compatibility = getString(idx("compatibility")),
-            stock = getInt(idx("stock")),
-            imagePath = getString(idx("image_path")),
-            active = getInt(idx("active")) == 1
+            id = id,
+            sellerId = getString("sellerId").orEmpty(),
+            name = name,
+            description = getString("description").orEmpty(),
+            price = getLong("price") ?: 0L,
+            category = getString("category").orEmpty(),
+            compatibility = getString("compatibility").orEmpty(),
+            stock = getLong("stock")?.toInt() ?: 0,
+            imagePath = getString("imagePath"),
+            active = getBoolean("active") ?: true
         )
     }
 
-    private fun Cursor.toOrder(items: List<OrderItem>): StoreOrder {
+    @Suppress("UNCHECKED_CAST")
+    private fun com.google.firebase.firestore.DocumentSnapshot.toOrder(id: String): StoreOrder? {
+        val rawItems = get("items") as? List<Map<String, Any?>> ?: emptyList()
+        val items = rawItems.mapIndexed { index, map ->
+            OrderItem(
+                id = "$id-$index",
+                orderId = id,
+                productId = map["productId"]?.toString().orEmpty(),
+                sellerId = map["sellerId"]?.toString().orEmpty(),
+                productName = map["productName"]?.toString().orEmpty(),
+                quantity = (map["quantity"] as? Number)?.toInt() ?: 0,
+                unitPrice = (map["unitPrice"] as? Number)?.toLong() ?: 0L
+            )
+        }
         return StoreOrder(
-            id = getLong(getColumnIndexOrThrow("id")),
-            code = getString(getColumnIndexOrThrow("code")),
-            buyerId = getLong(getColumnIndexOrThrow("buyer_id")),
-            buyerName = getString(getColumnIndexOrThrow("name")),
-            total = getLong(getColumnIndexOrThrow("total")),
-            shipping = getLong(getColumnIndexOrThrow("shipping")),
-            status = getString(getColumnIndexOrThrow("status")),
-            paymentRef = getString(getColumnIndexOrThrow("payment_ref")),
-            city = getString(getColumnIndexOrThrow("city")),
-            createdAt = getLong(getColumnIndexOrThrow("created_at")),
+            id = id,
+            code = getString("code").orEmpty(),
+            buyerId = getString("buyerId").orEmpty(),
+            buyerName = getString("buyerName").orEmpty(),
+            total = getLong("total") ?: 0L,
+            shipping = getLong("shipping") ?: 0L,
+            status = getString("status").orEmpty(),
+            paymentRef = getString("paymentRef").orEmpty(),
+            city = getString("city").orEmpty(),
+            createdAt = getLong("createdAt") ?: 0L,
             items = items
         )
     }
 
-    companion object {
-        private const val KEY_EMAIL = "recovery_email"
-        private const val KEY_CODE = "recovery_code"
-    }
+    private data class Seed(
+        val name: String,
+        val description: String,
+        val price: Long,
+        val category: String,
+        val compatibility: String,
+        val stock: Int
+    )
 }

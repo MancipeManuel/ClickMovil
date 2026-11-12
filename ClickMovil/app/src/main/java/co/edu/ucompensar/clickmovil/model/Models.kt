@@ -15,7 +15,7 @@ object Categories {
 }
 
 data class User(
-    val id: Long,
+    val id: String,
     val name: String,
     val email: String,
     val phone: String,
@@ -25,8 +25,8 @@ data class User(
 )
 
 data class Product(
-    val id: Long,
-    val sellerId: Long,
+    val id: String,
+    val sellerId: String,
     val name: String,
     val description: String,
     val price: Long,
@@ -38,7 +38,7 @@ data class Product(
 )
 
 data class CartLine(
-    val itemId: Long,
+    val itemId: String,
     val product: Product,
     val quantity: Int
 ) {
@@ -46,19 +46,19 @@ data class CartLine(
 }
 
 data class OrderItem(
-    val id: Long,
-    val orderId: Long,
-    val productId: Long,
-    val sellerId: Long,
+    val id: String,
+    val orderId: String,
+    val productId: String,
+    val sellerId: String,
     val productName: String,
     val quantity: Int,
     val unitPrice: Long
 )
 
 data class StoreOrder(
-    val id: Long,
+    val id: String,
     val code: String,
-    val buyerId: Long,
+    val buyerId: String,
     val buyerName: String,
     val total: Long,
     val shipping: Long,
