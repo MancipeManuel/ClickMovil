@@ -5,10 +5,12 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import co.edu.ucompensar.clickmovil.data.Repository
 import co.edu.ucompensar.clickmovil.data.SessionStore
 import co.edu.ucompensar.clickmovil.databinding.ActivityLoginBinding
 import co.edu.ucompensar.clickmovil.util.toast
+import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLoginBinding
@@ -34,16 +36,19 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun login() {
-        val user = repository.login(
-            binding.email.text?.toString().orEmpty(),
-            binding.password.text?.toString().orEmpty()
-        )
-        if (user == null) {
-            toast("Correo o contraseña incorrectos.")
-            return
+        val email = binding.email.text?.toString().orEmpty()
+        val password = binding.password.text?.toString().orEmpty()
+        binding.loginButton.isEnabled = false
+        lifecycleScope.launch {
+            val user = repository.login(email, password)
+            binding.loginButton.isEnabled = true
+            if (user == null) {
+                toast("Correo o contraseña incorrectos.")
+                return@launch
+            }
+            session.start(user)
+            openHome()
         }
-        session.start(user.id)
-        openHome()
     }
 
     private fun loginWithBiometric() {
@@ -58,13 +63,20 @@ class LoginActivity : AppCompatActivity() {
             executor,
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    val user = repository.userById(userId)
-                    if (user == null || !user.active) {
-                        toast("La cuenta ya no está disponible.")
-                        return
+                    lifecycleScope.launch {
+                        val authUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                        if (authUid == null || authUid != userId) {
+                            toast("La sesión de Firebase expiró. Entra con correo y contraseña.")
+                            return@launch
+                        }
+                        val user = repository.userById(userId)
+                        if (user == null || !user.active) {
+                            toast("La cuenta ya no está disponible.")
+                            return@launch
+                        }
+                        session.start(user)
+                        openHome()
                     }
-                    session.start(user.id)
-                    openHome()
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {

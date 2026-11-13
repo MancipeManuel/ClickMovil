@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import co.edu.ucompensar.clickmovil.R
 import co.edu.ucompensar.clickmovil.data.Repository
 import co.edu.ucompensar.clickmovil.data.SessionStore
@@ -12,6 +13,7 @@ import co.edu.ucompensar.clickmovil.model.OpResult
 import co.edu.ucompensar.clickmovil.model.Role
 import co.edu.ucompensar.clickmovil.util.bindBackToolbar
 import co.edu.ucompensar.clickmovil.util.toast
+import kotlinx.coroutines.launch
 
 class RegisterActivity : AppCompatActivity() {
     private lateinit var binding: ActivityRegisterBinding
@@ -53,16 +55,22 @@ class RegisterActivity : AppCompatActivity() {
             return
         }
         val role = roles[binding.role.selectedItemPosition]
-        when (val result = Repository(this).register(name, email, password, phone, city, role)) {
-            is OpResult.Ok -> {
-                SessionStore(this).start(result.value.id)
-                startActivity(
-                    Intent(this, HomeActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    }
-                )
+        binding.registerButton.isEnabled = false
+        lifecycleScope.launch {
+            when (val result = Repository(this@RegisterActivity).register(name, email, password, phone, city, role)) {
+                is OpResult.Ok -> {
+                    SessionStore(this@RegisterActivity).start(result.value)
+                    startActivity(
+                        Intent(this@RegisterActivity, HomeActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        }
+                    )
+                }
+                is OpResult.Err -> {
+                    binding.registerButton.isEnabled = true
+                    toast(result.message)
+                }
             }
-            is OpResult.Err -> toast(result.message)
         }
     }
 }
