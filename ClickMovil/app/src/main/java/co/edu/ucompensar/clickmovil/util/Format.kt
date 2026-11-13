@@ -43,6 +43,7 @@ fun Context.toast(message: String) {
 }
 
 fun decodeSampled(path: String, maxSize: Int = 480): Bitmap? {
+    if (path.startsWith("http://") || path.startsWith("https://")) return null
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeFile(path, bounds)
     var sample = 1
@@ -51,6 +52,19 @@ fun decodeSampled(path: String, maxSize: Int = 480): Bitmap? {
     }
     val opts = BitmapFactory.Options().apply { inSampleSize = sample }
     return BitmapFactory.decodeFile(path, opts)
+}
+
+/** Carga imagen local o URL de Firebase Storage en un ImageView. */
+fun android.widget.ImageView.bindProductImage(path: String?, maxSize: Int = 480) {
+    if (path.isNullOrBlank()) {
+        setImageDrawable(null)
+        return
+    }
+    if (path.startsWith("http://") || path.startsWith("https://")) {
+        com.bumptech.glide.Glide.with(context).load(path).centerCrop().into(this)
+    } else {
+        setImageBitmap(decodeSampled(path, maxSize))
+    }
 }
 
 fun copyImageToApp(context: Context, source: Uri): String? {

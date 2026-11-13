@@ -1,10 +1,7 @@
 package co.edu.ucompensar.clickmovil.ui.buyer
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
-import android.location.Geocoder
-import android.location.LocationManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,6 +9,7 @@ import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import co.edu.ucompensar.clickmovil.R
@@ -21,10 +19,11 @@ import co.edu.ucompensar.clickmovil.databinding.FragmentCartBinding
 import co.edu.ucompensar.clickmovil.databinding.ItemCartBinding
 import co.edu.ucompensar.clickmovil.model.CartLine
 import co.edu.ucompensar.clickmovil.model.OpResult
+import co.edu.ucompensar.clickmovil.util.LocationHelper
 import co.edu.ucompensar.clickmovil.util.Money
 import co.edu.ucompensar.clickmovil.util.shippingFor
 import co.edu.ucompensar.clickmovil.util.toast
-import java.util.Locale
+import kotlinx.coroutines.launch
 
 class CartFragment : Fragment() {
     private var _binding: FragmentCartBinding? = null
@@ -34,11 +33,13 @@ class CartFragment : Fragment() {
     private val adapter = CartAdapter(
         onChange = { productId, quantity ->
             val user = session.currentUser() ?: return@CartAdapter
-            when (val result = repository.updateCartQuantity(user.id, productId, quantity)) {
-                is OpResult.Ok -> reload()
-                is OpResult.Err -> {
-                    requireContext().toast(result.message)
-                    reload()
+            viewLifecycleOwner.lifecycleScope.launch {
+                when (val result = repository.updateCartQuantity(user.id, productId, quantity)) {
+                    is OpResult.Ok -> reload()
+                    is OpResult.Err -> {
+                        requireContext().toast(result.message)
+                        reload()
+                    }
                 }
             }
         }
@@ -72,16 +73,19 @@ class CartFragment : Fragment() {
 
     private fun reload() {
         val user = session.currentUser() ?: return
-        val lines = repository.cart(user.id)
-        adapter.submit(lines)
-        val subtotal = lines.sumOf { it.subtotal }
-        val city = binding.city.text?.toString().orEmpty()
-        val shipping = if (lines.isEmpty()) 0L else shippingFor(city.ifBlank { user.city })
-        binding.empty.visibility = if (lines.isEmpty()) View.VISIBLE else View.GONE
-        binding.subtotal.text = "Subtotal: ${Money.format(subtotal)}"
-        binding.shipping.text = "Envío: ${Money.format(shipping)}"
-        binding.total.text = "Total a pagar: ${Money.format(subtotal + shipping)}"
-        binding.payButton.isEnabled = lines.isNotEmpty()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val lines = repository.cart(user.id)
+            if (_binding == null) return@launch
+            adapter.submit(lines)
+            val subtotal = lines.sumOf { it.subtotal }
+            val city = binding.city.text?.toString().orEmpty()
+            val shipping = if (lines.isEmpty()) 0L else shippingFor(city.ifBlank { user.city })
+            binding.empty.visibility = if (lines.isEmpty()) View.VISIBLE else View.GONE
+            binding.subtotal.text = "Subtotal: ${Money.format(subtotal)}"
+            binding.shipping.text = "Envío: ${Money.format(shipping)}"
+            binding.total.text = "Total a pagar: ${Money.format(subtotal + shipping)}"
+            binding.payButton.isEnabled = lines.isNotEmpty()
+        }
     }
 
     private fun goToPay() {
@@ -105,31 +109,14 @@ class CartFragment : Fragment() {
     }
 
     private fun readLocation() {
-        val manager = requireContext().getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val location = try {
-            manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-                ?: manager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-        } catch (_: SecurityException) {
-            null
-        }
-        if (location == null) {
-            requireContext().toast("No hay una ubicación reciente. Escribe la ciudad.")
-            return
-        }
-        val city = try {
-            @Suppress("DEPRECATION")
-            Geocoder(requireContext(), Locale("es", "CO"))
-                .getFromLocation(location.latitude, location.longitude, 1)
-                ?.firstOrNull()
-                ?.locality
-        } catch (_: Exception) {
-            null
-        }
-        if (city.isNullOrBlank()) {
-            requireContext().toast("Se leyó la ubicación, pero no se obtuvo la ciudad.")
-        } else {
-            binding.city.setText(city)
-            reload()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val city = LocationHelper.resolveCity(requireContext())
+            if (city.isNullOrBlank()) {
+                requireContext().toast("No se obtuvo la ciudad. Escríbela manualmente.")
+            } else {
+                binding.city.setText(city)
+                reload()
+            }
         }
     }
 
@@ -140,7 +127,7 @@ class CartFragment : Fragment() {
 }
 
 private class CartAdapter(
-    private val onChange: (Long, Int) -> Unit
+    private val onChange: (String, Int) -> Unit
 ) : RecyclerView.Adapter<CartAdapter.Holder>() {
     private val items = mutableListOf<CartLine>()
 
