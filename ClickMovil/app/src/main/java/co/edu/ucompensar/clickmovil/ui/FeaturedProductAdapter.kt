@@ -10,6 +10,7 @@ import co.edu.ucompensar.clickmovil.R
 import co.edu.ucompensar.clickmovil.databinding.ItemFeaturedBinding
 import co.edu.ucompensar.clickmovil.model.Product
 import co.edu.ucompensar.clickmovil.util.Money
+import co.edu.ucompensar.clickmovil.util.bindProductImage
 import co.edu.ucompensar.clickmovil.util.categoryColor
 import co.edu.ucompensar.clickmovil.util.decodeSampled
 
@@ -40,9 +41,9 @@ class FeaturedProductAdapter(
             binding.name.text = product.name
             binding.price.text = Money.format(product.price)
             binding.stock.text = binding.root.context.getString(R.string.stock_available, product.stock.coerceAtLeast(0))
-            val bitmap = product.imagePath?.let { decodeSampled(it, 420) }
-            if (bitmap != null) {
-                binding.photo.setImageBitmap(bitmap)
+            val path = product.imagePath
+            if (!path.isNullOrBlank() && (path.startsWith("http") || decodeSampled(path, 420) != null)) {
+                binding.photo.bindProductImage(path, 420)
                 binding.photo.visibility = View.VISIBLE
                 binding.fallback.visibility = View.GONE
             } else {

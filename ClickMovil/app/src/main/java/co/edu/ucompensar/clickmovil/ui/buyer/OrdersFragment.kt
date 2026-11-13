@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import co.edu.ucompensar.clickmovil.data.Repository
@@ -18,6 +19,7 @@ import co.edu.ucompensar.clickmovil.model.StoreOrder
 import co.edu.ucompensar.clickmovil.util.Dates
 import co.edu.ucompensar.clickmovil.util.Money
 import co.edu.ucompensar.clickmovil.util.toast
+import kotlinx.coroutines.launch
 
 class OrdersFragment : Fragment() {
     private var _binding: FragmentListBinding? = null
@@ -43,19 +45,22 @@ class OrdersFragment : Fragment() {
 
     private fun reload() {
         val user = session.currentUser() ?: return
-        val orders = when (mode) {
-            MODE_SELLER -> repository.ordersForSeller(user.id)
-            MODE_ADMIN -> repository.allOrders()
-            else -> repository.ordersForBuyer(user.id)
-        }
-        binding.empty.visibility = if (orders.isEmpty()) View.VISIBLE else View.GONE
-        binding.empty.text = if (mode == MODE_BUYER) "Todavía no tienes pedidos." else "No hay pedidos para mostrar."
-        binding.list.adapter = OrderAdapter(orders, mode) { order, action ->
-            when (action) {
-                ACTION_DETAIL -> showDetail(order)
-                ACTION_CANCEL -> cancel(order)
-                ACTION_SHIP -> ship(order)
-                ACTION_DELIVER -> deliver(order)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val orders = when (mode) {
+                MODE_SELLER -> repository.ordersForSeller(user.id)
+                MODE_ADMIN -> repository.allOrders()
+                else -> repository.ordersForBuyer(user.id)
+            }
+            if (_binding == null) return@launch
+            binding.empty.visibility = if (orders.isEmpty()) View.VISIBLE else View.GONE
+            binding.empty.text = if (mode == MODE_BUYER) "Todavía no tienes pedidos." else "No hay pedidos para mostrar."
+            binding.list.adapter = OrderAdapter(orders, mode) { order, action ->
+                when (action) {
+                    ACTION_DETAIL -> showDetail(order)
+                    ACTION_CANCEL -> cancel(order)
+                    ACTION_SHIP -> ship(order)
+                    ACTION_DELIVER -> deliver(order)
+                }
             }
         }
     }
@@ -84,27 +89,33 @@ class OrdersFragment : Fragment() {
 
     private fun cancel(order: StoreOrder) {
         val user = session.currentUser() ?: return
-        when (val result = repository.cancelOrder(user.id, order.id)) {
-            is OpResult.Ok -> {
-                requireContext().toast("Pedido cancelado. El registro se conserva y el inventario volvió.")
-                reload()
+        viewLifecycleOwner.lifecycleScope.launch {
+            when (val result = repository.cancelOrder(user.id, order.id)) {
+                is OpResult.Ok -> {
+                    requireContext().toast("Pedido cancelado. El registro se conserva y el inventario volvió.")
+                    reload()
+                }
+                is OpResult.Err -> requireContext().toast(result.message)
             }
-            is OpResult.Err -> requireContext().toast(result.message)
         }
     }
 
     private fun ship(order: StoreOrder) {
         val user = session.currentUser() ?: return
-        when (val result = repository.markShipped(user.id, order.id)) {
-            is OpResult.Ok -> reload()
-            is OpResult.Err -> requireContext().toast(result.message)
+        viewLifecycleOwner.lifecycleScope.launch {
+            when (val result = repository.markShipped(user.id, order.id)) {
+                is OpResult.Ok -> reload()
+                is OpResult.Err -> requireContext().toast(result.message)
+            }
         }
     }
 
     private fun deliver(order: StoreOrder) {
-        when (val result = repository.markDelivered(order.id)) {
-            is OpResult.Ok -> reload()
-            is OpResult.Err -> requireContext().toast(result.message)
+        viewLifecycleOwner.lifecycleScope.launch {
+            when (val result = repository.markDelivered(order.id)) {
+                is OpResult.Ok -> reload()
+                is OpResult.Err -> requireContext().toast(result.message)
+            }
         }
     }
 

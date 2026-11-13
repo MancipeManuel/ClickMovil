@@ -6,11 +6,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import co.edu.ucompensar.clickmovil.data.Repository
 import co.edu.ucompensar.clickmovil.databinding.FragmentListBinding
 import co.edu.ucompensar.clickmovil.ui.ProductAdapter
 import co.edu.ucompensar.clickmovil.ui.seller.ProductFormActivity
+import kotlinx.coroutines.launch
 
 class AdminProductsFragment : Fragment() {
     private var _binding: FragmentListBinding? = null
@@ -39,10 +41,13 @@ class AdminProductsFragment : Fragment() {
     }
 
     private fun reload() {
-        val products = Repository(requireContext()).products(null, null, null, includeInactive = true)
-        adapter.submit(products)
-        binding.empty.visibility = if (products.isEmpty()) View.VISIBLE else View.GONE
-        binding.empty.text = "No hay productos."
+        viewLifecycleOwner.lifecycleScope.launch {
+            val products = Repository(requireContext()).products(null, null, null, includeInactive = true)
+            if (_binding == null) return@launch
+            adapter.submit(products)
+            binding.empty.visibility = if (products.isEmpty()) View.VISIBLE else View.GONE
+            binding.empty.text = "No hay productos."
+        }
     }
 
     override fun onDestroyView() {

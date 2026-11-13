@@ -6,10 +6,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import co.edu.ucompensar.clickmovil.data.Repository
 import co.edu.ucompensar.clickmovil.data.SessionStore
 import co.edu.ucompensar.clickmovil.databinding.FragmentAdminHomeBinding
 import co.edu.ucompensar.clickmovil.ui.LoginActivity
+import kotlinx.coroutines.launch
 
 class AdminHomeFragment : Fragment() {
     private var _binding: FragmentAdminHomeBinding? = null
@@ -21,11 +23,14 @@ class AdminHomeFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        val repository = Repository(requireContext())
-        val users = repository.users()
-        binding.usersCount.text = "${users.count { it.active }}\nUsuarios"
-        binding.productsCount.text = "${repository.products(null, null, null, true).size}\nProductos"
-        binding.ordersCount.text = "${repository.allOrders().size}\nPedidos"
+        viewLifecycleOwner.lifecycleScope.launch {
+            val repository = Repository(requireContext())
+            val users = repository.users()
+            if (_binding == null) return@launch
+            binding.usersCount.text = "${users.count { it.active }}\nUsuarios"
+            binding.productsCount.text = "${repository.products(null, null, null, true).size}\nProductos"
+            binding.ordersCount.text = "${repository.allOrders().size}\nPedidos"
+        }
         binding.logoutButton.setOnClickListener {
             SessionStore(requireContext()).logout()
             startActivity(

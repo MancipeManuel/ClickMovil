@@ -10,12 +10,14 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import co.edu.ucompensar.clickmovil.data.Repository
 import co.edu.ucompensar.clickmovil.data.SessionStore
 import co.edu.ucompensar.clickmovil.databinding.FragmentProfileBinding
 import co.edu.ucompensar.clickmovil.model.OpResult
 import co.edu.ucompensar.clickmovil.ui.LoginActivity
 import co.edu.ucompensar.clickmovil.util.toast
+import kotlinx.coroutines.launch
 
 class ProfileFragment : Fragment() {
     private var _binding: FragmentProfileBinding? = null
@@ -43,16 +45,21 @@ class ProfileFragment : Fragment() {
 
     private fun save() {
         val user = session.currentUser() ?: return
-        when (
-            val result = repository.updateProfile(
-                user.id,
-                binding.name.text?.toString().orEmpty(),
-                binding.phone.text?.toString().orEmpty(),
-                binding.city.text?.toString().orEmpty()
-            )
-        ) {
-            is OpResult.Ok -> requireContext().toast("Perfil actualizado.")
-            is OpResult.Err -> requireContext().toast(result.message)
+        viewLifecycleOwner.lifecycleScope.launch {
+            when (
+                val result = repository.updateProfile(
+                    user.id,
+                    binding.name.text?.toString().orEmpty(),
+                    binding.phone.text?.toString().orEmpty(),
+                    binding.city.text?.toString().orEmpty()
+                )
+            ) {
+                is OpResult.Ok -> {
+                    session.start(result.value)
+                    requireContext().toast("Perfil actualizado.")
+                }
+                is OpResult.Err -> requireContext().toast(result.message)
+            }
         }
     }
 
@@ -90,11 +97,11 @@ class ProfileFragment : Fragment() {
             .setMessage(
                 "ClickMóvil pide solo los datos de la cuenta, el contacto y la ciudad de entrega. " +
                     "La cámara se usa para fotos de productos y la ubicación solo si tú la autorizas para sugerir la ciudad. " +
-                    "La contraseña se guarda cifrada. No almacenamos datos de tarjeta.\n\n" +
+                    "La autenticación usa Firebase Auth. No almacenamos datos de tarjeta.\n\n" +
                     "Puedes actualizar tu perfil. Los pedidos confirmados se conservan aunque cambie el estado, " +
                     "para no perder la trazabilidad de la compra.\n\n" +
                     "Precios, disponibilidad, garantía de 30 días y condiciones de entrega se muestran antes de pagar. " +
-                    "Canal de reclamos: soporte@clickmovil.com"
+                    "Los pagos se procesan con pasarela ePayco. Canal de reclamos: soporte@clickmovil.com"
             )
             .setPositiveButton("Entendido", null)
             .show()

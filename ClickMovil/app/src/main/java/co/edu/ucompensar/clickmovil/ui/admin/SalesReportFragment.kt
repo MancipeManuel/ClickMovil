@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import co.edu.ucompensar.clickmovil.R
@@ -14,6 +15,7 @@ import co.edu.ucompensar.clickmovil.databinding.FragmentSalesReportBinding
 import co.edu.ucompensar.clickmovil.model.StoreOrder
 import co.edu.ucompensar.clickmovil.util.Dates
 import co.edu.ucompensar.clickmovil.util.Money
+import kotlinx.coroutines.launch
 
 class SalesReportFragment : Fragment() {
     private var _binding: FragmentSalesReportBinding? = null
@@ -25,15 +27,18 @@ class SalesReportFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        val repository = Repository(requireContext())
-        val totals = repository.salesTotals()
-        binding.revenue.text = getString(R.string.revenue) + "\n" + Money.format(totals.revenue)
-        binding.paid.text = "${totals.paid}\n${getString(R.string.paid)}"
-        binding.shipped.text = "${totals.shipped}\n${getString(R.string.shipped)}"
-        binding.delivered.text = "${totals.delivered}\n${getString(R.string.delivered)}"
-        binding.cancelled.text = "${totals.cancelled}\n${getString(R.string.cancelled)}"
         binding.list.layoutManager = LinearLayoutManager(requireContext())
-        binding.list.adapter = ReportAdapter(repository.allOrders())
+        viewLifecycleOwner.lifecycleScope.launch {
+            val repository = Repository(requireContext())
+            val totals = repository.salesTotals()
+            if (_binding == null) return@launch
+            binding.revenue.text = getString(R.string.revenue) + "\n" + Money.format(totals.revenue)
+            binding.paid.text = "${totals.paid}\n${getString(R.string.paid)}"
+            binding.shipped.text = "${totals.shipped}\n${getString(R.string.shipped)}"
+            binding.delivered.text = "${totals.delivered}\n${getString(R.string.delivered)}"
+            binding.cancelled.text = "${totals.cancelled}\n${getString(R.string.cancelled)}"
+            binding.list.adapter = ReportAdapter(repository.allOrders())
+        }
     }
 
     override fun onDestroyView() {

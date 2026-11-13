@@ -6,11 +6,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import co.edu.ucompensar.clickmovil.data.Repository
 import co.edu.ucompensar.clickmovil.data.SessionStore
 import co.edu.ucompensar.clickmovil.databinding.FragmentSellerProductsBinding
 import co.edu.ucompensar.clickmovil.ui.ProductAdapter
+import kotlinx.coroutines.launch
 
 class SellerProductsFragment : Fragment() {
     private var _binding: FragmentSellerProductsBinding? = null
@@ -45,12 +47,15 @@ class SellerProductsFragment : Fragment() {
 
     private fun reload() {
         val user = session.currentUser() ?: return
-        val products = repository.products(null, null, user.id, includeInactive = false)
-        val open = repository.ordersForSeller(user.id).count { it.status == "PAGADO" || it.status == "ENVIADO" }
-        binding.published.text = "${products.size}\nPublicados"
-        binding.openOrders.text = "$open\nPedidos"
-        binding.lowStock.text = "${repository.lowStockCount(user.id)}\nStock bajo"
-        adapter.submit(products)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val products = repository.products(null, null, user.id, includeInactive = false)
+            val open = repository.ordersForSeller(user.id).count { it.status == "PAGADO" || it.status == "ENVIADO" }
+            if (_binding == null) return@launch
+            binding.published.text = "${products.size}\nPublicados"
+            binding.openOrders.text = "$open\nPedidos"
+            binding.lowStock.text = "${repository.lowStockCount(user.id)}\nStock bajo"
+            adapter.submit(products)
+        }
     }
 
     override fun onDestroyView() {

@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.RecyclerView
 import co.edu.ucompensar.clickmovil.databinding.ItemProductBinding
 import co.edu.ucompensar.clickmovil.model.Product
 import co.edu.ucompensar.clickmovil.util.Money
+import co.edu.ucompensar.clickmovil.util.bindProductImage
 import co.edu.ucompensar.clickmovil.util.categoryColor
 import co.edu.ucompensar.clickmovil.util.decodeSampled
 
@@ -43,9 +44,9 @@ class ProductAdapter(
                 binding.stock.text = "${product.stock} disponibles"
                 binding.stock.setTextColor(0xFF047857.toInt())
             }
-            val bitmap = product.imagePath?.let { decodeSampled(it, 160) }
-            if (bitmap != null) {
-                binding.photo.setImageBitmap(bitmap)
+            val path = product.imagePath
+            if (!path.isNullOrBlank() && (path.startsWith("http") || decodeSampled(path, 160) != null)) {
+                binding.photo.bindProductImage(path, 160)
                 binding.photo.visibility = View.VISIBLE
                 binding.fallback.visibility = View.GONE
             } else {

@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import co.edu.ucompensar.clickmovil.R
@@ -18,6 +19,7 @@ import co.edu.ucompensar.clickmovil.model.OpResult
 import co.edu.ucompensar.clickmovil.model.Role
 import co.edu.ucompensar.clickmovil.model.User
 import co.edu.ucompensar.clickmovil.util.toast
+import kotlinx.coroutines.launch
 
 class AdminUsersFragment : Fragment() {
     private var _binding: FragmentUsersBinding? = null
@@ -45,50 +47,59 @@ class AdminUsersFragment : Fragment() {
 
     private fun reload() {
         val actor = session.currentUser() ?: return
-        val users = repository.users()
-        binding.empty.visibility = if (users.isEmpty()) View.VISIBLE else View.GONE
-        binding.list.adapter = UserAdapter(
-            users,
-            onEdit = { user ->
-                startActivity(
-                    Intent(requireContext(), UserFormActivity::class.java)
-                        .putExtra(UserFormActivity.EXTRA_ID, user.id)
-                )
-            },
-            onRole = { user -> pickRole(actor.id, user) },
-            onActive = { user -> toggle(actor.id, user) },
-            onDelete = { user -> confirmDelete(actor.id, user) }
-        )
+        viewLifecycleOwner.lifecycleScope.launch {
+            val users = repository.users()
+            if (_binding == null) return@launch
+            binding.empty.visibility = if (users.isEmpty()) View.VISIBLE else View.GONE
+            binding.list.adapter = UserAdapter(
+                users,
+                onEdit = { user ->
+                    startActivity(
+                        Intent(requireContext(), UserFormActivity::class.java)
+                            .putExtra(UserFormActivity.EXTRA_ID, user.id)
+                    )
+                },
+                onRole = { user -> pickRole(actor.id, user) },
+                onActive = { user -> toggle(actor.id, user) },
+                onDelete = { user -> confirmDelete(actor.id, user) }
+            )
+        }
     }
 
-    private fun pickRole(actorId: Long, user: User) {
+    private fun pickRole(actorId: String, user: User) {
         val labels = Role.entries.map { it.label }.toTypedArray()
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.change_role))
             .setItems(labels) { _, which ->
-                when (val result = repository.setRole(actorId, user.id, Role.entries[which])) {
-                    is OpResult.Ok -> reload()
-                    is OpResult.Err -> requireContext().toast(result.message)
+                viewLifecycleOwner.lifecycleScope.launch {
+                    when (val result = repository.setRole(actorId, user.id, Role.entries[which])) {
+                        is OpResult.Ok -> reload()
+                        is OpResult.Err -> requireContext().toast(result.message)
+                    }
                 }
             }
             .show()
     }
 
-    private fun toggle(actorId: Long, user: User) {
-        when (val result = repository.setActive(actorId, user.id, !user.active)) {
-            is OpResult.Ok -> reload()
-            is OpResult.Err -> requireContext().toast(result.message)
+    private fun toggle(actorId: String, user: User) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            when (val result = repository.setActive(actorId, user.id, !user.active)) {
+                is OpResult.Ok -> reload()
+                is OpResult.Err -> requireContext().toast(result.message)
+            }
         }
     }
 
-    private fun confirmDelete(actorId: Long, user: User) {
+    private fun confirmDelete(actorId: String, user: User) {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.delete_user))
             .setMessage(user.name)
             .setPositiveButton(getString(R.string.delete_user)) { _, _ ->
-                when (val result = repository.deleteUser(actorId, user.id)) {
-                    is OpResult.Ok -> reload()
-                    is OpResult.Err -> requireContext().toast(result.message)
+                viewLifecycleOwner.lifecycleScope.launch {
+                    when (val result = repository.deleteUser(actorId, user.id)) {
+                        is OpResult.Ok -> reload()
+                        is OpResult.Err -> requireContext().toast(result.message)
+                    }
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)

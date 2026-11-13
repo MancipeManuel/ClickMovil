@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import co.edu.ucompensar.clickmovil.R
 import co.edu.ucompensar.clickmovil.data.Repository
@@ -17,6 +18,7 @@ import co.edu.ucompensar.clickmovil.model.OpResult
 import co.edu.ucompensar.clickmovil.ui.FeaturedProductAdapter
 import co.edu.ucompensar.clickmovil.util.toast
 import com.google.android.material.chip.Chip
+import kotlinx.coroutines.launch
 
 class CatalogFragment : Fragment() {
     private var _binding: FragmentCatalogBinding? = null
@@ -31,9 +33,11 @@ class CatalogFragment : Fragment() {
         },
         onAdd = { product ->
             val user = SessionStore(requireContext()).currentUser() ?: return@FeaturedProductAdapter
-            when (val result = repository.addToCart(user.id, product.id, 1)) {
-                is OpResult.Ok -> requireContext().toast("Agregado al carrito")
-                is OpResult.Err -> requireContext().toast(result.message)
+            viewLifecycleOwner.lifecycleScope.launch {
+                when (val result = repository.addToCart(user.id, product.id, 1)) {
+                    is OpResult.Ok -> requireContext().toast("Agregado al carrito")
+                    is OpResult.Err -> requireContext().toast(result.message)
+                }
             }
         }
     )
@@ -71,14 +75,17 @@ class CatalogFragment : Fragment() {
         val label = binding.chips.findViewById<Chip>(selectedId)?.text?.toString()
         val category = label?.takeIf { it != "Todos" }
         val query = binding.search.text?.toString()
-        val items = repository.products(category, query, sellerId = null, includeInactive = false)
-        adapter.submit(items)
-        binding.catalogHint.text = if (items.isEmpty()) {
-            getString(R.string.empty_catalog)
-        } else {
-            getString(R.string.catalog_count, items.size)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val items = repository.products(category, query, sellerId = null, includeInactive = false)
+            if (_binding == null) return@launch
+            adapter.submit(items)
+            binding.catalogHint.text = if (items.isEmpty()) {
+                getString(R.string.empty_catalog)
+            } else {
+                getString(R.string.catalog_count, items.size)
+            }
+            binding.empty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
         }
-        binding.empty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
     }
 
     override fun onDestroyView() {

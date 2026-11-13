@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import co.edu.ucompensar.clickmovil.R
 import co.edu.ucompensar.clickmovil.data.Repository
@@ -15,6 +16,7 @@ import co.edu.ucompensar.clickmovil.model.OpResult
 import co.edu.ucompensar.clickmovil.ui.FeaturedProductAdapter
 import co.edu.ucompensar.clickmovil.ui.HomeActivity
 import co.edu.ucompensar.clickmovil.util.toast
+import kotlinx.coroutines.launch
 
 class BuyerHomeFragment : Fragment() {
     private var _binding: FragmentBuyerHomeBinding? = null
@@ -28,9 +30,11 @@ class BuyerHomeFragment : Fragment() {
         },
         onAdd = { product ->
             val user = SessionStore(requireContext()).currentUser() ?: return@FeaturedProductAdapter
-            when (val result = Repository(requireContext()).addToCart(user.id, product.id, 1)) {
-                is OpResult.Ok -> requireContext().toast("Agregado al carrito")
-                is OpResult.Err -> requireContext().toast(result.message)
+            viewLifecycleOwner.lifecycleScope.launch {
+                when (val result = Repository(requireContext()).addToCart(user.id, product.id, 1)) {
+                    is OpResult.Ok -> requireContext().toast("Agregado al carrito")
+                    is OpResult.Err -> requireContext().toast(result.message)
+                }
             }
         }
     )
@@ -59,17 +63,20 @@ class BuyerHomeFragment : Fragment() {
     }
 
     private fun reload() {
-        val repository = Repository(requireContext())
-        val products = repository.products(null, null, null, includeInactive = false)
-        binding.catalogCount.text = getString(R.string.catalog_count, products.size)
-        val userId = SessionStore(requireContext()).currentUser()?.id
-        val moving = if (userId == null) {
-            0
-        } else {
-            repository.ordersForBuyer(userId).count { it.status == "PAGADO" || it.status == "ENVIADO" }
+        viewLifecycleOwner.lifecycleScope.launch {
+            val repository = Repository(requireContext())
+            val products = repository.products(null, null, null, includeInactive = false)
+            if (_binding == null) return@launch
+            binding.catalogCount.text = getString(R.string.catalog_count, products.size)
+            val userId = SessionStore(requireContext()).currentUser()?.id
+            val moving = if (userId == null) {
+                0
+            } else {
+                repository.ordersForBuyer(userId).count { it.status == "PAGADO" || it.status == "ENVIADO" }
+            }
+            binding.ordersHint.text = getString(R.string.orders_on_the_way, moving)
+            adapter.submit(products.filter { it.stock > 0 }.take(4))
         }
-        binding.ordersHint.text = getString(R.string.orders_on_the_way, moving)
-        adapter.submit(products.filter { it.stock > 0 }.take(4))
     }
 
     override fun onDestroyView() {
