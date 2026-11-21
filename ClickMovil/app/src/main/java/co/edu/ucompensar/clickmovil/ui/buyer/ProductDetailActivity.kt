@@ -11,8 +11,8 @@ import co.edu.ucompensar.clickmovil.model.OpResult
 import co.edu.ucompensar.clickmovil.model.Product
 import co.edu.ucompensar.clickmovil.model.Role
 import co.edu.ucompensar.clickmovil.util.Money
-import co.edu.ucompensar.clickmovil.util.bindProductImage
 import co.edu.ucompensar.clickmovil.util.categoryColor
+import co.edu.ucompensar.clickmovil.util.showProductPhoto
 import co.edu.ucompensar.clickmovil.util.toast
 import kotlinx.coroutines.launch
 
@@ -55,9 +55,12 @@ class ProductDetailActivity : AppCompatActivity() {
             binding.description.text = product.description
             binding.fallback.text = product.name
             binding.fallback.setBackgroundColor(categoryColor(product.category))
-            if (!product.imagePath.isNullOrBlank()) {
-                binding.photo.bindProductImage(product.imagePath, 800)
+            if (binding.photo.showProductPhoto(product.imagePath, product.name, 800)) {
                 binding.photo.visibility = View.VISIBLE
+                binding.fallback.visibility = View.GONE
+            } else {
+                binding.photo.visibility = View.GONE
+                binding.fallback.visibility = View.VISIBLE
             }
             val canBuy = user?.role == Role.COMPRADOR && product.active && product.stock > 0
             if (!canBuy) {

@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import co.edu.ucompensar.clickmovil.R
 import co.edu.ucompensar.clickmovil.data.SessionStore
@@ -36,6 +38,7 @@ class HomeActivity : AppCompatActivity() {
         }
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        applyStatusBarInset()
         binding.toolbarSubtitle.text = "${user.name} · ${user.role.label}"
         if (user.role == Role.COMPRADOR) {
             binding.cartShortcut.visibility = View.VISIBLE
@@ -76,6 +79,21 @@ class HomeActivity : AppCompatActivity() {
 
     fun openTab(itemId: Int) {
         binding.bottom.selectedItemId = itemId
+    }
+
+    /** Empuja la barra superior debajo del reloj y los iconos del sistema. */
+    private fun applyStatusBarInset() {
+        val bar = binding.topBar
+        val baseStart = bar.paddingStart
+        val baseTop = bar.paddingTop
+        val baseEnd = bar.paddingEnd
+        val baseBottom = bar.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(bar) { view, insets ->
+            val top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            view.setPaddingRelative(baseStart, baseTop + top, baseEnd, baseBottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(bar)
     }
 
     private fun goRootTab() {

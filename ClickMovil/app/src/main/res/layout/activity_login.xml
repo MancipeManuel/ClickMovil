@@ -155,17 +155,5 @@
                     android:textSize="@dimen/text_small" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
-        <TextView
-            android:id="@+id/demoText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_md"
-            android:layout_marginBottom="@dimen/space_lg"
-            android:background="@drawable/bg_mint_icon"
-            android:padding="@dimen/space_md"
-            android:text="@string/demo_accounts"
-            android:textColor="@color/muted"
-            android:textSize="@dimen/text_small" />
     </LinearLayout>
 </ScrollView>

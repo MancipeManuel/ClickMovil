@@ -12,7 +12,6 @@
     <string name="login_bio">Entrar con huella</string>
     <string name="go_register">¿Aún no tienes cuenta? Crear cuenta</string>
     <string name="privacy_login">Al continuar aceptas el tratamiento de tus datos para gestionar la cuenta y los pedidos.</string>
-    <string name="demo_accounts">Cuentas de prueba:\nana@correo.com / 123456 (comprador)\nvendedor@correo.com / 123456 (vendedor)\nadmin@correo.com / admin123 (administrador)</string>
     <string name="register_title">Crear cuenta</string>
     <string name="name">Nombre</string>
     <string name="phone">Celular</string>
@@ -103,6 +102,14 @@
     <string name="compatibility">Compatibilidad</string>
     <string name="retire_product">Retirar publicación</string>
     <string name="admin_role_note">Rol verificado antes de mostrar este panel.</string>
+    <string name="admin_shortcuts">Accesos rápidos</string>
+    <string name="admin_recent">Pedidos recientes</string>
+    <string name="admin_no_orders">Aún no hay pedidos registrados.</string>
+    <string name="manage_users">Gestionar usuarios</string>
+    <string name="manage_users_hint">Crear, editar, activar o cambiar rol</string>
+    <string name="see_products">Ver productos</string>
+    <string name="see_products_hint">Catálogo publicado por los vendedores</string>
+    <string name="open_report_hint">Historial y estados de las ventas</string>
     <string name="enable_biometric">Activar ingreso con huella</string>
     <string name="order_detail">Detalle</string>
     <string name="remove">Quitar</string>

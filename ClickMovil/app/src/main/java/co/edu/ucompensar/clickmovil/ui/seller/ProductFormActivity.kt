@@ -18,7 +18,7 @@ import co.edu.ucompensar.clickmovil.model.Categories
 import co.edu.ucompensar.clickmovil.model.OpResult
 import co.edu.ucompensar.clickmovil.model.Role
 import co.edu.ucompensar.clickmovil.util.bindBackToolbar
-import co.edu.ucompensar.clickmovil.util.bindProductImage
+import co.edu.ucompensar.clickmovil.util.showProductPhoto
 import co.edu.ucompensar.clickmovil.util.copyImageToApp
 import co.edu.ucompensar.clickmovil.util.newCameraFile
 import co.edu.ucompensar.clickmovil.util.toast
@@ -115,8 +115,8 @@ class ProductFormActivity : AppCompatActivity() {
     }
 
     private fun showPhoto() {
-        if (photoPath.isNullOrBlank()) return
-        binding.photo.bindProductImage(photoPath, 800)
+        val name = binding.name.text?.toString().orEmpty()
+        if (!binding.photo.showProductPhoto(photoPath, name, 800)) return
         binding.photo.visibility = View.VISIBLE
         binding.fallback.visibility = View.GONE
     }

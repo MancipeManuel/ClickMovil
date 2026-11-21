@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.Toast
+import co.edu.ucompensar.clickmovil.R
 import java.io.File
 import java.security.MessageDigest
 import java.text.NumberFormat
@@ -52,6 +53,37 @@ fun decodeSampled(path: String, maxSize: Int = 480): Bitmap? {
     }
     val opts = BitmapFactory.Options().apply { inSampleSize = sample }
     return BitmapFactory.decodeFile(path, opts)
+}
+
+/** Foto de catálogo incluida en la app, según el nombre del producto. */
+fun catalogPhoto(name: String): Int? {
+    val n = name.lowercase()
+    return when {
+        n.contains("funda") -> R.drawable.photo_funda
+        n.contains("cargador") -> R.drawable.photo_cargador
+        n.contains("audif") -> R.drawable.photo_audifonos
+        n.contains("bater") -> R.drawable.photo_bateria
+        n.contains("cable") -> R.drawable.photo_cable
+        n.contains("soporte") -> R.drawable.photo_soporte
+        n.contains("protector") || n.contains("vidrio") -> R.drawable.photo_protector
+        n.contains("adaptador") || n.contains("jack") -> R.drawable.photo_adaptador
+        else -> null
+    }
+}
+
+/**
+ * Muestra la foto subida por el vendedor si existe.
+ * Si el producto del catálogo aún no tiene foto propia, usa la imagen incluida en la app.
+ * Devuelve true cuando quedó una imagen visible.
+ */
+fun android.widget.ImageView.showProductPhoto(path: String?, name: String, maxSize: Int = 480): Boolean {
+    if (!path.isNullOrBlank() && (path.startsWith("http") || decodeSampled(path, maxSize) != null)) {
+        bindProductImage(path, maxSize)
+        return true
+    }
+    val bundled = catalogPhoto(name) ?: return false
+    setImageResource(bundled)
+    return true
 }
 
 /** Carga imagen local o URL de Firebase Storage en un ImageView. */
