@@ -14,6 +14,10 @@ import java.io.File
 class ImageUploader(private val context: Context) {
     private val storage = FirebaseStorage.getInstance()
 
+    /**
+     * Sube la foto y devuelve la URL.
+     * Si el archivo no existe o Storage rechaza la carga, devuelve la ruta local.
+     */
     suspend fun uploadProductImage(localPath: String, productId: String): String {
         val file = File(localPath)
         if (!file.exists()) return localPath

@@ -15,6 +15,7 @@ import co.edu.ucompensar.clickmovil.util.bindBackToolbar
 import co.edu.ucompensar.clickmovil.util.toast
 import kotlinx.coroutines.launch
 
+/** Registro público de comprador o vendedor. El rol administrador no se ofrece aquí. */
 class RegisterActivity : AppCompatActivity() {
     private lateinit var binding: ActivityRegisterBinding
     private val roles = listOf(Role.COMPRADOR, Role.VENDEDOR)
@@ -32,6 +33,7 @@ class RegisterActivity : AppCompatActivity() {
         binding.registerButton.setOnClickListener { register() }
     }
 
+    /** Valida el formulario, crea la cuenta en Auth y deja la sesión iniciada. */
     private fun register() {
         val name = binding.name.text?.toString().orEmpty().trim()
         val email = binding.email.text?.toString().orEmpty().trim()

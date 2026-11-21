@@ -17,6 +17,7 @@ import co.edu.ucompensar.clickmovil.util.Dates
 import co.edu.ucompensar.clickmovil.util.Money
 import kotlinx.coroutines.launch
 
+/** Reporte de ingresos y estados de pedido leídos desde Firestore. */
 class SalesReportFragment : Fragment() {
     private var _binding: FragmentSalesReportBinding? = null
     private val binding get() = _binding!!

@@ -8,6 +8,11 @@ import co.edu.ucompensar.clickmovil.model.Role
 import co.edu.ucompensar.clickmovil.util.Password
 import java.io.File
 
+/**
+ * Esquema SQLite de la etapa anterior a Firebase.
+ * El flujo actual no lo consulta: usuarios, productos, carrito y pedidos viven en Firestore.
+ * Se conserva para no perder el modelo local documentado en actividades previas.
+ */
 class DbHelper private constructor(context: Context) :
     SQLiteOpenHelper(context.applicationContext, "clickmovil.db", null, 3) {
 

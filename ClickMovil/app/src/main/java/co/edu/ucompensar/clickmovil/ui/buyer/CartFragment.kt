@@ -3,6 +3,7 @@ package co.edu.ucompensar.clickmovil.ui.buyer
 import android.Manifest
 import android.content.Intent
 import android.os.Bundle
+import android.view.inputmethod.InputMethodManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -25,6 +26,10 @@ import co.edu.ucompensar.clickmovil.util.shippingFor
 import co.edu.ucompensar.clickmovil.util.toast
 import kotlinx.coroutines.launch
 
+/**
+ * Carrito del comprador. Permite cambiar cantidades, sugerir la ciudad con
+ * la ubicación del teléfono y pasar al checkout con esa ciudad de entrega.
+ */
 class CartFragment : Fragment() {
     private var _binding: FragmentCartBinding? = null
     private val binding get() = _binding!!
@@ -94,9 +99,12 @@ class CartFragment : Fragment() {
             requireContext().toast("Escribe la ciudad de entrega.")
             return
         }
+        val input = requireContext().getSystemService(InputMethodManager::class.java)
+        input?.hideSoftInputFromWindow(binding.city.windowToken, 0)
         startActivity(Intent(requireContext(), CheckoutActivity::class.java).putExtra(CheckoutActivity.EXTRA_CITY, city))
     }
 
+    /** Explica para qué se usa la ubicación antes de pedir el permiso. */
     private fun askLocation() {
         AlertDialog.Builder(requireContext())
             .setTitle("Ubicación")
@@ -108,6 +116,7 @@ class CartFragment : Fragment() {
             .show()
     }
 
+    /** Escribe en el campo de ciudad la localidad devuelta por el GPS. */
     private fun readLocation() {
         viewLifecycleOwner.lifecycleScope.launch {
             val city = LocationHelper.resolveCity(requireContext())

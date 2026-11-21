@@ -14,6 +14,7 @@ import co.edu.ucompensar.clickmovil.util.bindBackToolbar
 import co.edu.ucompensar.clickmovil.util.toast
 import kotlinx.coroutines.launch
 
+/** Formulario de alta o edición de usuario. Solo entra si la sesión es de administrador. */
 class UserFormActivity : AppCompatActivity() {
     private lateinit var binding: ActivityUserFormBinding
     private var userId: String? = null
@@ -53,6 +54,7 @@ class UserFormActivity : AppCompatActivity() {
         binding.saveButton.setOnClickListener { save(actor.id, roles) }
     }
 
+    /** Guarda el usuario administrado y cierra la pantalla si Firestore acepta el cambio. */
     private fun save(actorId: String, roles: List<Role>) {
         lifecycleScope.launch {
             when (

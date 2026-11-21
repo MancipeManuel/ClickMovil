@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** Hash local usado por el esquema SQLite anterior. Firebase Auth no lo utiliza. */
 object Password {
     fun hash(raw: String): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(raw.toByteArray())
@@ -20,6 +21,7 @@ object Password {
     }
 }
 
+/** Formato de pesos colombianos sin decimales. */
 object Money {
     private val format: NumberFormat = NumberFormat.getInstance(Locale("es", "CO")).apply {
         maximumFractionDigits = 0
@@ -29,11 +31,13 @@ object Money {
     fun format(value: Long): String = "$ ${format.format(value)}"
 }
 
+/** Fecha corta en español para el historial de pedidos. */
 object Dates {
     private val format = SimpleDateFormat("d MMM yyyy", Locale("es", "CO"))
     fun format(millis: Long): String = format.format(Date(millis))
 }
 
+/** Envío más bajo si la ciudad es Bogotá; el resto del país usa la tarifa general. */
 fun shippingFor(city: String): Long {
     val normalized = city.trim().lowercase(Locale.ROOT)
     return if (normalized.contains("bogot")) 8_000L else 12_000L

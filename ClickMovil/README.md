@@ -1,7 +1,7 @@
 # ClickMóvil
 
 Tienda virtual Android de accesorios para celular (Fundación Universitaria Compensar).
-Actividad 4 — Interfaces gráficas completas por rol (comprador, vendedor y administrador).
+Actividad 6 — Aplicativo funcional con Firebase Auth, Firestore, Storage, geolocalización y checkout.
 
 ## Requisitos
 
@@ -29,20 +29,20 @@ Actividad 4 — Interfaces gráficas completas por rol (comprador, vendedor y ad
 Splash, login, registro, recuperación de contraseña, autenticación biométrica y `BottomNavigationView` por rol.
 
 ### Comprador
-Inicio, catálogo, detalle de producto, carrito, pasarela de pago simulada, pedidos y perfil.
+Inicio con fotos de catálogo, catálogo, detalle de producto, carrito, ubicación de entrega, checkout con referencia EPAYCO, pedidos y perfil.
 
 ### Vendedor
 CRUD de productos (con cámara/galería), historial de pedidos recibidos y perfil.
 
 ### Administrador
-Dashboard, gestión de usuarios (crear/editar/activar/eliminar), productos y reporte de ventas.
+Panel con totales, accesos y pedidos recientes; gestión de usuarios (crear/editar/activar/eliminar), productos y reporte de ventas.
 
 ## Estructura del proyecto
 
 ```
 app/src/main/
 ├── java/.../clickmovil/
-│   ├── data/          # SQLite, repositorio y sesión
+│   ├── data/          # Firestore, Storage, sesión y esquema SQLite anterior
 │   ├── model/         # Entidades y roles
 │   ├── ui/            # Activities y Fragments por rol
 │   └── util/          # Navegación y formato

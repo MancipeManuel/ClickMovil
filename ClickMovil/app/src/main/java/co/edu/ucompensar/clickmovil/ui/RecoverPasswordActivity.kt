@@ -12,6 +12,7 @@ import co.edu.ucompensar.clickmovil.util.bindBackToolbar
 import co.edu.ucompensar.clickmovil.util.toast
 import kotlinx.coroutines.launch
 
+/** Pide a Firebase Auth el correo con el enlace para definir una nueva contraseña. */
 class RecoverPasswordActivity : AppCompatActivity() {
     private lateinit var binding: ActivityRecoverBinding
 
@@ -27,6 +28,7 @@ class RecoverPasswordActivity : AppCompatActivity() {
         binding.confirmLayout.visibility = View.GONE
     }
 
+    /** Envía el enlace de recuperación y muestra la instrucción en pantalla. */
     private fun sendResetEmail() {
         lifecycleScope.launch {
             when (val result = Repository(this@RecoverPasswordActivity).startRecovery(binding.email.text?.toString().orEmpty())) {

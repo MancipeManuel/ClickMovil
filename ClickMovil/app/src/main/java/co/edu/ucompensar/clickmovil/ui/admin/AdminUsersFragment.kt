@@ -21,6 +21,7 @@ import co.edu.ucompensar.clickmovil.model.User
 import co.edu.ucompensar.clickmovil.util.toast
 import kotlinx.coroutines.launch
 
+/** Listado de cuentas. Desde aquí el administrador cambia rol, activa o elimina. */
 class AdminUsersFragment : Fragment() {
     private var _binding: FragmentUsersBinding? = null
     private val binding get() = _binding!!
@@ -66,6 +67,7 @@ class AdminUsersFragment : Fragment() {
         }
     }
 
+    /** Muestra los roles y guarda el elegido si el repositorio lo permite. */
     private fun pickRole(actorId: String, user: User) {
         val labels = Role.entries.map { it.label }.toTypedArray()
         AlertDialog.Builder(requireContext())
@@ -81,6 +83,7 @@ class AdminUsersFragment : Fragment() {
             .show()
     }
 
+    /** Activa o desactiva la cuenta sin borrarla. */
     private fun toggle(actorId: String, user: User) {
         viewLifecycleOwner.lifecycleScope.launch {
             when (val result = repository.setActive(actorId, user.id, !user.active)) {
@@ -90,6 +93,7 @@ class AdminUsersFragment : Fragment() {
         }
     }
 
+    /** Pide confirmación y elimina solo si no hay productos ni pedidos asociados. */
     private fun confirmDelete(actorId: String, user: User) {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.delete_user))

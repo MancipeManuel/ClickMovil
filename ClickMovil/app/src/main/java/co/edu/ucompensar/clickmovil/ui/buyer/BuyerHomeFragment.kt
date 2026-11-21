@@ -18,6 +18,7 @@ import co.edu.ucompensar.clickmovil.ui.HomeActivity
 import co.edu.ucompensar.clickmovil.util.toast
 import kotlinx.coroutines.launch
 
+/** Inicio del comprador: destacados, acceso al catálogo y al historial de pedidos. */
 class BuyerHomeFragment : Fragment() {
     private var _binding: FragmentBuyerHomeBinding? = null
     private val binding get() = _binding!!

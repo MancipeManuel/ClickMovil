@@ -44,6 +44,10 @@
         <item name="hintTextColor">@color/ink</item>
     </style>
 
+    <style name="Theme.ClickMovil.Checkout" parent="Theme.ClickMovil">
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+
     <style name="Theme.ClickMovil.Splash" parent="Theme.ClickMovil">
         <item name="android:windowBackground">@color/navy</item>
         <item name="android:statusBarColor">@color/navy</item>

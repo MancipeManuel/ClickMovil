@@ -16,6 +16,7 @@ import kotlin.coroutines.resume
  */
 object LocationHelper {
     @SuppressLint("MissingPermission")
+    /** Obtiene la ciudad actual. Devuelve nulo si no hay permiso, señal o geocodificación. */
     suspend fun resolveCity(context: Context): String? {
         val client = LocationServices.getFusedLocationProviderClient(context)
         val location = try {

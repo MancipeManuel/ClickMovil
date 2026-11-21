@@ -12,6 +12,10 @@ import co.edu.ucompensar.clickmovil.databinding.ActivityLoginBinding
 import co.edu.ucompensar.clickmovil.util.toast
 import kotlinx.coroutines.launch
 
+/**
+ * Ingreso con correo y contraseña, o con huella si esa cuenta ya se activó en el perfil.
+ * Después de cerrar sesión, Auth ya no tiene usuario y la huella pide volver a escribir la clave.
+ */
 class LoginActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLoginBinding
     private val session by lazy { SessionStore(this) }
@@ -35,6 +39,7 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    /** Valida credenciales en Firebase Auth y abre el panel del rol. */
     private fun login() {
         val email = binding.email.text?.toString().orEmpty()
         val password = binding.password.text?.toString().orEmpty()
@@ -51,6 +56,7 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    /** Pide la huella del dispositivo y reutiliza la sesión de Firebase si sigue abierta. */
     private fun loginWithBiometric() {
         val userId = session.biometricUserId()
         if (userId == null) {

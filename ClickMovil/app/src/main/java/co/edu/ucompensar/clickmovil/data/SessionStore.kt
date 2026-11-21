@@ -5,10 +5,16 @@ import co.edu.ucompensar.clickmovil.model.Role
 import co.edu.ucompensar.clickmovil.model.User
 import com.google.firebase.auth.FirebaseAuth
 
+/**
+ * Sesión local alineada con Firebase Auth.
+ * Guarda el perfil visible en preferencias y cierra Auth al salir.
+ * La huella solo recuerda el uid; no guarda la contraseña ni la huella.
+ */
 class SessionStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     private val auth = FirebaseAuth.getInstance()
 
+    /** Perfil activo solo si el uid de Auth coincide con el guardado y la cuenta sigue activa. */
     fun currentUser(): User? {
         val uid = auth.currentUser?.uid ?: prefs.getString(KEY_USER, null) ?: return null
         val name = prefs.getString(KEY_NAME, null) ?: return null
@@ -26,6 +32,7 @@ class SessionStore(context: Context) {
         ).takeIf { it.active }
     }
 
+    /** Persiste el perfil después de un login o de actualizar datos. */
     fun start(user: User) {
         prefs.edit()
             .putString(KEY_USER, user.id)
@@ -38,6 +45,7 @@ class SessionStore(context: Context) {
             .apply()
     }
 
+    /** Cierra Firebase Auth y borra el perfil local. La marca de huella se conserva. */
     fun logout() {
         auth.signOut()
         prefs.edit()
@@ -51,6 +59,7 @@ class SessionStore(context: Context) {
             .apply()
     }
 
+    /** Recuerda qué cuenta puede intentar el ingreso con huella en este teléfono. */
     fun enableBiometric(userId: String) {
         prefs.edit().putString(KEY_BIO, userId).apply()
     }

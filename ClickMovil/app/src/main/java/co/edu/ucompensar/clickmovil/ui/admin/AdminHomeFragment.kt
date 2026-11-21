@@ -17,6 +17,7 @@ import co.edu.ucompensar.clickmovil.util.Dates
 import co.edu.ucompensar.clickmovil.util.Money
 import kotlinx.coroutines.launch
 
+/** Panel del administrador: totales, accesos a cada CRUD y pedidos recientes. */
 class AdminHomeFragment : Fragment() {
     private var _binding: FragmentAdminHomeBinding? = null
     private val binding get() = _binding!!

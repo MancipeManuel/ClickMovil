@@ -10,6 +10,7 @@ import co.edu.ucompensar.clickmovil.util.Money
 import co.edu.ucompensar.clickmovil.util.categoryColor
 import co.edu.ucompensar.clickmovil.util.showProductPhoto
 
+/** Fila de producto para listas de vendedor y administrador, con foto o inicial. */
 class ProductAdapter(
     private val onClick: (Product) -> Unit
 ) : RecyclerView.Adapter<ProductAdapter.Holder>() {

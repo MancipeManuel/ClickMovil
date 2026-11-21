@@ -16,6 +16,7 @@ import co.edu.ucompensar.clickmovil.util.showProductPhoto
 import co.edu.ucompensar.clickmovil.util.toast
 import kotlinx.coroutines.launch
 
+/** Ficha del producto. El comprador elige cantidad y lo agrega al carrito. */
 class ProductDetailActivity : AppCompatActivity() {
     private lateinit var binding: ActivityProductDetailBinding
     private var quantity = 1

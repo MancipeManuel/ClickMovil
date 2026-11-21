@@ -13,6 +13,7 @@ import co.edu.ucompensar.clickmovil.util.Money
 import co.edu.ucompensar.clickmovil.util.categoryColor
 import co.edu.ucompensar.clickmovil.util.showProductPhoto
 
+/** Tarjeta de catálogo. Muestra la foto propia, la del catálogo incluido o el bloque CM. */
 class FeaturedProductAdapter(
     private val onOpen: (Product) -> Unit,
     private val onAdd: ((Product) -> Unit)? = null

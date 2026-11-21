@@ -23,6 +23,10 @@ import co.edu.ucompensar.clickmovil.ui.buyer.OrdersFragment
 import co.edu.ucompensar.clickmovil.ui.buyer.ProfileFragment
 import co.edu.ucompensar.clickmovil.ui.seller.SellerProductsFragment
 
+/**
+ * Contenedor de los tres roles. Cambia el menú inferior y el fragmento
+ * según la cuenta activa, y deja la barra superior debajo de la barra de estado.
+ */
 class HomeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityHomeBinding
     private val session by lazy { SessionStore(this) }
@@ -77,6 +81,7 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    /** Cambia de pestaña desde un fragmento, por ejemplo los accesos del panel admin. */
     fun openTab(itemId: Int) {
         binding.bottom.selectedItemId = itemId
     }
@@ -106,6 +111,7 @@ class HomeActivity : AppCompatActivity() {
         binding.brandMark.visibility = if (onRoot) View.VISIBLE else View.GONE
     }
 
+    /** Elige la pantalla que corresponde a cada ítem del menú del rol. */
     private fun fragmentFor(itemId: Int): Fragment {
         return when (itemId) {
             R.id.nav_home -> BuyerHomeFragment()

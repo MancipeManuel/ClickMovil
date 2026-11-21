@@ -1,0 +1,11 @@
+{
+  "name": "clickmovil-firebase",
+  "private": true,
+  "scripts": {
+    "test:unit": "node --test functions/test/orderLogic.test.js functions/test/migrateGuard.test.js",
+    "test:emulator": "npx firebase-tools emulators:exec --only firestore,storage --project clickmovil-rules \"node --test --test-concurrency=1 functions/test/rules.test.js functions/test/checkout.emulator.test.js functions/test/migrate.emulator.test.js\""
+  },
+  "devDependencies": {
+    "firebase-tools": "^14.27.0"
+  }
+}

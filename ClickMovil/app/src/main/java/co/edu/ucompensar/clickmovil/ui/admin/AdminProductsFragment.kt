@@ -14,6 +14,7 @@ import co.edu.ucompensar.clickmovil.ui.ProductAdapter
 import co.edu.ucompensar.clickmovil.ui.seller.ProductFormActivity
 import kotlinx.coroutines.launch
 
+/** Supervisión de todo el catálogo. Abrir un ítem lleva al mismo formulario del vendedor. */
 class AdminProductsFragment : Fragment() {
     private var _binding: FragmentListBinding? = null
     private val binding get() = _binding!!

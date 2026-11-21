@@ -19,6 +19,7 @@ import co.edu.ucompensar.clickmovil.ui.LoginActivity
 import co.edu.ucompensar.clickmovil.util.toast
 import kotlinx.coroutines.launch
 
+/** Perfil compartido por los tres roles: datos de contacto, huella y cierre de sesión. */
 class ProfileFragment : Fragment() {
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
@@ -63,6 +64,7 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    /** Comprueba que el teléfono tenga biometría y guarda el uid para el próximo ingreso. */
     private fun enableBiometric() {
         val user = session.currentUser() ?: return
         val authenticators = BiometricManager.Authenticators.BIOMETRIC_WEAK
@@ -101,12 +103,13 @@ class ProfileFragment : Fragment() {
                     "Puedes actualizar tu perfil. Los pedidos confirmados se conservan aunque cambie el estado, " +
                     "para no perder la trazabilidad de la compra.\n\n" +
                     "Precios, disponibilidad, garantía de 30 días y condiciones de entrega se muestran antes de pagar. " +
-                    "Los pagos se procesan con pasarela ePayco. Canal de reclamos: soporte@clickmovil.com"
+                    "El pedido se registra en la tienda. No se hace un cobro real en ePayco. Canal de reclamos: soporte@clickmovil.com"
             )
             .setPositiveButton("Entendido", null)
             .show()
     }
 
+    /** Cierra Auth y vuelve al login. La huella queda activada, pero Auth pide la clave. */
     private fun logout() {
         session.logout()
         startActivity(

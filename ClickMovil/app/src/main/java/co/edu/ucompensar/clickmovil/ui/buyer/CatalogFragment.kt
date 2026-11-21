@@ -20,6 +20,7 @@ import co.edu.ucompensar.clickmovil.util.toast
 import com.google.android.material.chip.Chip
 import kotlinx.coroutines.launch
 
+/** Catálogo con búsqueda, filtro por categoría y alta rápida al carrito. */
 class CatalogFragment : Fragment() {
     private var _binding: FragmentCatalogBinding? = null
     private val binding get() = _binding!!

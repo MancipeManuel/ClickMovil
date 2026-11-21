@@ -38,6 +38,7 @@ class Repository(context: Context) {
     private val orders = db.collection("orders")
     private val meta = db.collection("meta")
 
+    /** Inicia sesión en Firebase Auth y devuelve el perfil solo si la cuenta está activa. */
     suspend fun login(email: String, password: String): User? {
         return try {
             val result = auth.signInWithEmailAndPassword(email.trim().lowercase(), password).await()
@@ -53,6 +54,7 @@ class Repository(context: Context) {
         }
     }
 
+    /** Crea la cuenta en Auth y el documento de perfil. Rechaza el rol administrador. */
     suspend fun register(
         name: String,
         email: String,
@@ -97,6 +99,7 @@ class Repository(context: Context) {
             .sortedBy { it.name.lowercase() }
     }
 
+    /** Actualiza nombre, teléfono y ciudad del perfil en Firestore. */
     suspend fun updateProfile(userId: String, name: String, phone: String, city: String): OpResult<User> {
         if (name.isBlank()) return OpResult.Err("El nombre es obligatorio.")
         users.document(userId).update(
@@ -109,6 +112,7 @@ class Repository(context: Context) {
         return userById(userId)?.let { OpResult.Ok(it) } ?: OpResult.Err("No se encontró la cuenta.")
     }
 
+    /** Activa o desactiva una cuenta. Impide apagar al último administrador o a uno mismo. */
     suspend fun setActive(actorId: String, userId: String, active: Boolean): OpResult<Unit> {
         if (actorId == userId) return OpResult.Err("No puedes desactivar tu propia cuenta.")
         val target = userById(userId) ?: return OpResult.Err("Usuario no encontrado.")
@@ -119,6 +123,7 @@ class Repository(context: Context) {
         return OpResult.Ok(Unit)
     }
 
+    /** Cambia el rol y protege que siempre quede al menos un administrador. */
     suspend fun setRole(actorId: String, userId: String, role: Role): OpResult<Unit> {
         val target = userById(userId) ?: return OpResult.Err("Usuario no encontrado.")
         if (actorId == userId && role != Role.ADMIN) {
@@ -152,6 +157,7 @@ class Repository(context: Context) {
         )
     }
 
+    /** Alta o edición hecha por un administrador. La alta usa una instancia secundaria de Auth. */
     suspend fun saveManagedUser(
         actorId: String,
         userId: String?,
@@ -186,6 +192,7 @@ class Repository(context: Context) {
         return userById(userId)?.let { OpResult.Ok(it) } ?: OpResult.Err("No se pudo actualizar el usuario.")
     }
 
+    /** Elimina la cuenta solo si no tiene productos ni pedidos, para conservar la trazabilidad. */
     suspend fun deleteUser(actorId: String, userId: String): OpResult<Unit> {
         if (actorId == userId) return OpResult.Err("No puedes eliminar tu propia cuenta.")
         val target = userById(userId) ?: return OpResult.Err("Usuario no encontrado.")
@@ -202,6 +209,7 @@ class Repository(context: Context) {
         return OpResult.Ok(Unit)
     }
 
+    /** Resume ingresos y cantidades por estado para el reporte del administrador. */
     suspend fun salesTotals(): SalesTotals {
         val list = allOrders()
         return SalesTotals(
@@ -214,6 +222,7 @@ class Repository(context: Context) {
         )
     }
 
+    /** Lista productos y aplica filtros de categoría, vendedor, texto y activos. */
     suspend fun products(
         category: String?,
         query: String?,
@@ -239,6 +248,7 @@ class Repository(context: Context) {
         return snap.toProduct(id)
     }
 
+    /** Crea o actualiza un producto y sube la foto si hay una ruta local nueva. */
     suspend fun saveProduct(
         actor: User,
         productId: String?,
@@ -283,6 +293,7 @@ class Repository(context: Context) {
         return OpResult.Ok(id)
     }
 
+    /** Retira la publicación sin borrar el documento, para no romper pedidos antiguos. */
     suspend fun retireProduct(actor: User, productId: String): OpResult<Unit> {
         val existing = product(productId) ?: return OpResult.Err("Producto no encontrado.")
         if (actor.role == Role.VENDEDOR && existing.sellerId != actor.id) {
@@ -305,6 +316,7 @@ class Repository(context: Context) {
         return lines.sortedBy { it.product.name.lowercase() }
     }
 
+    /** Suma unidades al carrito si hay stock suficiente. */
     suspend fun addToCart(userId: String, productId: String, quantity: Int): OpResult<Unit> {
         val product = product(productId) ?: return OpResult.Err("El producto no existe.")
         if (!product.active) return OpResult.Err("Este producto ya no está publicado.")
@@ -319,6 +331,7 @@ class Repository(context: Context) {
         return OpResult.Ok(Unit)
     }
 
+    /** Cambia la cantidad de una línea. Cero elimina el ítem del carrito. */
     suspend fun updateCartQuantity(userId: String, productId: String, quantity: Int): OpResult<Unit> {
         val itemRef = carts.document(userId).collection("items").document(productId)
         if (quantity <= 0) {
@@ -332,10 +345,18 @@ class Repository(context: Context) {
     }
 
     /**
-     * Checkout con pasarela certificada simulada estilo ePayco:
-     * genera referencia EPAYCO-xxxxx y deja el pedido en estado PAGADO.
+     * Registra el pedido en Firestore, descuenta stock y vacía el carrito.
+     * La referencia es interna: no hay cobro en ePayco.
      */
     suspend fun checkout(buyerId: String, city: String): OpResult<StoreOrder> {
+        return try {
+            checkoutInFirestore(buyerId, city)
+        } catch (error: Exception) {
+            OpResult.Err(error.message?.takeIf { it.isNotBlank() } ?: "No se pudo registrar el pedido.")
+        }
+    }
+
+    private suspend fun checkoutInFirestore(buyerId: String, city: String): OpResult<StoreOrder> {
         val cityClean = city.trim()
         if (cityClean.isEmpty()) return OpResult.Err("Escribe la ciudad de entrega.")
         val lines = cart(buyerId)
@@ -350,7 +371,7 @@ class Repository(context: Context) {
         }
         val shipping = shippingFor(cityClean)
         val orderRef = orders.document()
-        val paymentRef = "EPAYCO-${100000 + Random.nextInt(900000)}"
+        val paymentRef = "REF-${100000 + Random.nextInt(900000)}"
         val code = "CM-${orderRef.id.takeLast(6).uppercase()}"
         val buyer = userById(buyerId)
         val items = lines.map { line ->
@@ -363,6 +384,7 @@ class Repository(context: Context) {
                 "unitPrice" to fresh.price
             )
         }
+        val sellerIds = items.mapNotNull { it["sellerId"] as? String }.filter { it.isNotBlank() }.distinct()
         val orderData = mapOf(
             "code" to code,
             "buyerId" to buyerId,
@@ -371,18 +393,21 @@ class Repository(context: Context) {
             "shipping" to shipping,
             "status" to "PAGADO",
             "paymentRef" to paymentRef,
-            "paymentGateway" to "ePayco",
+            "paymentGateway" to "sin-cobro-real",
             "city" to cityClean,
             "createdAt" to System.currentTimeMillis(),
-            "items" to items
+            "items" to items,
+            "sellerIds" to sellerIds
         )
         db.runTransaction { tx ->
-            for (line in lines) {
+            val updates = lines.map { line ->
                 val pref = products.document(line.product.id)
-                val snap = tx.get(pref)
-                val stock = snap.getLong("stock")?.toInt() ?: 0
-                if (stock < line.quantity) throw IllegalStateException("Stock insuficiente")
-                tx.update(pref, "stock", stock - line.quantity)
+                val stock = tx.get(pref).getLong("stock")?.toInt() ?: 0
+                if (stock < line.quantity) throw IllegalStateException("Stock insuficiente de ${line.product.name}")
+                pref to (stock - line.quantity)
+            }
+            for ((pref, stock) in updates) {
+                tx.update(pref, "stock", stock)
             }
             tx.set(orderRef, orderData)
         }.await()
@@ -399,6 +424,10 @@ class Repository(context: Context) {
             .sortedByDescending { it.createdAt }
     }
 
+    /**
+     * Pedidos del vendedor. Lee el historial y filtra por el vendedor de cada ítem,
+     * así también aparecen los pedidos anteriores que no tienen sellerIds.
+     */
     suspend fun ordersForSeller(sellerId: String): List<StoreOrder> {
         return allOrders().filter { order -> order.items.any { it.sellerId == sellerId } }
     }
@@ -409,6 +438,7 @@ class Repository(context: Context) {
             .sortedByDescending { it.createdAt }
     }
 
+    /** Cancela un pedido pagado que aún no salió y devuelve el stock en Firestore. */
     suspend fun cancelOrder(buyerId: String, orderId: String): OpResult<Unit> {
         val order = orderById(orderId) ?: return OpResult.Err("Pedido no encontrado.")
         if (order.buyerId != buyerId) return OpResult.Err("Solo puedes cancelar tus pedidos.")
@@ -416,17 +446,20 @@ class Repository(context: Context) {
             return OpResult.Err("Solo se cancela un pedido pagado que todavía no fue enviado. El registro se conserva.")
         }
         db.runTransaction { tx ->
-            for (item in order.items) {
+            val updates = order.items.map { item ->
                 val pref = products.document(item.productId)
-                val snap = tx.get(pref)
-                val stock = snap.getLong("stock")?.toInt() ?: 0
-                tx.update(pref, "stock", stock + item.quantity)
+                val stock = tx.get(pref).getLong("stock")?.toInt() ?: 0
+                pref to (stock + item.quantity)
+            }
+            for ((pref, stock) in updates) {
+                tx.update(pref, "stock", stock)
             }
             tx.update(orders.document(orderId), "status", "CANCELADO")
         }.await()
         return OpResult.Ok(Unit)
     }
 
+    /** El vendedor marca enviado un pedido que contiene alguno de sus productos. */
     suspend fun markShipped(sellerId: String, orderId: String): OpResult<Unit> {
         val order = orderById(orderId) ?: return OpResult.Err("Pedido no encontrado.")
         if (order.items.none { it.sellerId == sellerId }) {
@@ -437,6 +470,7 @@ class Repository(context: Context) {
         return OpResult.Ok(Unit)
     }
 
+    /** El administrador marca el pedido como entregado. Un cancelado no cambia. */
     suspend fun markDelivered(orderId: String): OpResult<Unit> {
         val order = orderById(orderId) ?: return OpResult.Err("Pedido no encontrado.")
         if (order.status == "CANCELADO") return OpResult.Err("Un pedido cancelado no se marca como entregado.")

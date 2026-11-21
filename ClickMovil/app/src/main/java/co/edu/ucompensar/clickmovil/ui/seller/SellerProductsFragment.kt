@@ -14,6 +14,7 @@ import co.edu.ucompensar.clickmovil.databinding.FragmentSellerProductsBinding
 import co.edu.ucompensar.clickmovil.ui.ProductAdapter
 import kotlinx.coroutines.launch
 
+/** Listado de productos del vendedor en sesión y acceso a crear o editar uno. */
 class SellerProductsFragment : Fragment() {
     private var _binding: FragmentSellerProductsBinding? = null
     private val binding get() = _binding!!

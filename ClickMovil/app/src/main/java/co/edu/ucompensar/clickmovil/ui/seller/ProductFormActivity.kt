@@ -25,6 +25,10 @@ import co.edu.ucompensar.clickmovil.util.toast
 import kotlinx.coroutines.launch
 import java.io.File
 
+/**
+ * Alta y edición de producto. La foto sale de la cámara o de la galería
+ * y el repositorio intenta guardarla en Firebase Storage.
+ */
 class ProductFormActivity : AppCompatActivity() {
     private lateinit var binding: ActivityProductFormBinding
     private var productId: String? = null
@@ -107,6 +111,7 @@ class ProductFormActivity : AppCompatActivity() {
         binding.retireButton.setOnClickListener { retire() }
     }
 
+    /** Crea un archivo temporal y abre la cámara del dispositivo. */
     private fun openCamera() {
         val file = newCameraFile(this)
         pendingCamera = file
@@ -121,6 +126,7 @@ class ProductFormActivity : AppCompatActivity() {
         binding.fallback.visibility = View.GONE
     }
 
+    /** Valida precio y stock, y persiste el producto con la foto seleccionada. */
     private fun save() {
         val user = SessionStore(this).currentUser() ?: return
         val price = binding.price.text?.toString()?.toLongOrNull()

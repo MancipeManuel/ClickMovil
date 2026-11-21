@@ -10,6 +10,10 @@ import co.edu.ucompensar.clickmovil.databinding.ActivitySplashBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * Pantalla inicial. Siembra el catálogo demo una sola vez y abre inicio o login
+ * según exista una sesión de Firebase todavía válida.
+ */
 class SplashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

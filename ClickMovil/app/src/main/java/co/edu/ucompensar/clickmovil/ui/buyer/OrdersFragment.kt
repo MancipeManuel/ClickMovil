@@ -21,6 +21,10 @@ import co.edu.ucompensar.clickmovil.util.Money
 import co.edu.ucompensar.clickmovil.util.toast
 import kotlinx.coroutines.launch
 
+/**
+ * Historial de pedidos. El mismo fragmento sirve al comprador, al vendedor
+ * y se crea con un modo que decide qué acciones muestra cada rol.
+ */
 class OrdersFragment : Fragment() {
     private var _binding: FragmentListBinding? = null
     private val binding get() = _binding!!
@@ -43,6 +47,7 @@ class OrdersFragment : Fragment() {
         if (_binding != null) reload()
     }
 
+    /** Carga los pedidos del comprador, del vendedor o todos, según el modo del fragmento. */
     private fun reload() {
         val user = session.currentUser() ?: return
         viewLifecycleOwner.lifecycleScope.launch {
@@ -87,6 +92,7 @@ class OrdersFragment : Fragment() {
             .show()
     }
 
+    /** El comprador cancela un pedido que sigue en estado pagado. */
     private fun cancel(order: StoreOrder) {
         val user = session.currentUser() ?: return
         viewLifecycleOwner.lifecycleScope.launch {
@@ -100,6 +106,7 @@ class OrdersFragment : Fragment() {
         }
     }
 
+    /** El vendedor registra el despacho del pedido. */
     private fun ship(order: StoreOrder) {
         val user = session.currentUser() ?: return
         viewLifecycleOwner.lifecycleScope.launch {
@@ -110,6 +117,7 @@ class OrdersFragment : Fragment() {
         }
     }
 
+    /** El administrador marca el pedido como entregado. */
     private fun deliver(order: StoreOrder) {
         viewLifecycleOwner.lifecycleScope.launch {
             when (val result = repository.markDelivered(order.id)) {
